@@ -25,10 +25,10 @@ client.on('message', msg => {
 		if (msg.content.startsWith('!step')) {
 			let power = parseInt(msg.content.split(' ')[1])
 			players.push(new Player(power, msg.author))
-
+			msg.channel.send
 		}
 
-		if (msg.content.startsWith('!push')) {
+		if (msg.content.startsWith('!commit')) {
 			let dice = msg.content.split(' ')[1]
 			if (dice) {
 				players.forEach(player => {
@@ -36,7 +36,8 @@ client.on('message', msg => {
 						const n: number = dice.split('d')[0]
 						const size: number = dice.split('d')[1]
 						player.push(n, size)
-						msg.channel.send(`${msg.author} ${player.play}`)
+						msg.channel.send(`${msg.author}`)
+						msg.channel.send(player.play)
 					}
 				});
 			}
