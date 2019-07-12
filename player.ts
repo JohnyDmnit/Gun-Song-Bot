@@ -1,14 +1,18 @@
+import { Dice } from "./dice";
+
 export class Player {
 	playerData: any;
-	play: number[];
+	play: Dice[];
 	power: number;
 	availablePower: number;
+	diceList: any;
 
-	constructor(_power: number, data: any) {
+	constructor(_power: number, data: any, _diceList: any) {
 		this.power = _power
 		this.playerData = data
 		this.play = [];
 		this.availablePower = _power
+		this.diceList = _diceList
 	}
 
 	push(n: number, size: number) {
@@ -16,11 +20,16 @@ export class Player {
 			if (this.availablePower && this.availablePower - n >= 0) {
 				this.availablePower -= n;
 				for (let i = 0; i < n; i++) {
-					this.play.push(this.dice(size))				
+					let roll = this.dice(size)
+					this.play.push(this.diceList[`d${size}`][roll-1])
 				}
 			}
 			this.play.sort((a, b) => a - b)
 		}
+	}
+
+	counter(x: number, y?: number, xType?: number, yType?: number) {
+
 	}
 
 	private dice(n) {
