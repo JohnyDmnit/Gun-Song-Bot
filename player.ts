@@ -24,12 +24,32 @@ export class Player {
 					this.play.push(this.diceList[`d${size}`][roll-1])
 				}
 			}
-			this.play.sort((a, b) => a - b)
+			this.play.sort((a, b) => a.value - b.value)
 		}
 	}
 
-	counter(x: number, y?: number, xType?: number, yType?: number) {
+	counter(x: number, xType?: number) {
 
+	}
+
+	reroll(dice: number[], type?: string) {
+		for (let i = 0; i < dice.length; i++) {
+			const die = dice[i];
+			for (let j = 0; j < this.play.length; j++) {
+				let playerDie = this.play[j];
+				if (type) {
+					//Implement by type
+				} else {
+					if(playerDie.value === die) {
+						let roll = this.dice(playerDie.size)
+						this.play.splice(j,1)
+						this.play.push(this.diceList[playerDie.type][roll-1])
+						this.play.sort((a, b) => a.value - b.value)
+						break
+					}
+				}
+			}
+		}
 	}
 
 	private dice(n) {

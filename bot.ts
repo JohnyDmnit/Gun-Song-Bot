@@ -31,12 +31,9 @@ function initDice(diceList: any) {
 				emoji.name.startsWith('d8') ||
 				emoji.name.startsWith('d10')
 			) {
-				//Emoji format: <:dType_Value:Number>
-				let splitEmoji: string[] = emoji.name.split('_')
-				let value: number = parseInt(splitEmoji[1])
-				let type: string = splitEmoji[0]
-				diceList[type].push(new Dice(value, emoji.toString(), type))
-				diceList[type].sort((a, b) => a.value - b.value)
+				let dice: Dice = new Dice(emoji.toString())
+				diceList[dice.type].push(dice)
+				diceList[dice.type].sort((a, b) => a.value - b.value)
 			}
 		})
 }
@@ -104,6 +101,21 @@ client.on('message', msg => {
 						}
 					}
 				});
+			}
+		}
+
+		if (msg.content.startsWith('!reroll')) {
+			players.forEach(player => {
+				if (player.playerData.username === msg.author.username) {
+					let dice = msg.content.split(' ')[1].split(',').map(die => parseInt(die))
+					player.reroll(dice)
+					let diceString: string = ''
+					player.play.forEach(dice => {
+						diceString += `${dice.emoji} `
+					});
+					msg.channel.send(diceString)
+
+				}
 			}
 		}
 	}
