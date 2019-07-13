@@ -24,28 +24,62 @@ export class Player {
 		this.play.sort((a, b) => a.value - b.value)
 	}
 
-	counter(x: number, xType?: number) {
-
-	}
-
-	reroll(dice: number[], type?: string) {
+	counter(dice: number[], xType?: number) {
 		for (let i = 0; i < dice.length; i++) {
 			const die = dice[i];
 			for (let j = 0; j < this.play.length; j++) {
-				let playerDie = this.play[j];
-				if (type) {
-					//Implement by type
-				} else {
-					if (playerDie.value === die) {
-						let roll = this.dice(playerDie.size)
-						this.play.splice(j, 1)
-						this.play.push(this.diceList[playerDie.type][roll - 1])
-						this.play.sort((a, b) => a.value - b.value)
+				const playerDie = this.play[j];
+				if (die === playerDie.value) {
+					if(xType) {
+						
+					} else {
+						this.play.splice(j,1)
 						break
 					}
 				}
+				
+			}
+			
+		}
+	}
+
+	reroll(dice: number[], type?: string) {
+		let length = this.play.length
+		let newDice: Dice[] = []
+		let newPlay: Dice[] = [...this.play]
+
+		if (dice.length > 0) {
+			for (let i = 0; i < dice.length; i++) {
+				const die = dice[i];
+				for (let j = 0; j < this.play.length; j++) {
+					const playerDie = this.play[j];
+					if (playerDie.value === die) {
+						if (type) {
+							
+						} else {
+							let roll = this.dice(playerDie.size)
+						newPlay.splice(j, 1)
+						newPlay.push(this.diceList[playerDie.type][roll - 1])
+						break
+						}
+					}
+				}
+			}
+		} else {
+			//Reroll all dice
+			let j = 0
+			while (newPlay.length > 0) {
+				const playerDie = this.play[j];
+				let roll = this.dice(playerDie.size)
+				newPlay.splice(0, 1)
+				newDice.push(this.diceList[playerDie.type][roll - 1])
+				j++
 			}
 		}
+
+		newPlay.push(...newDice)
+		this.play = [...newPlay]
+		this.play.sort((a, b) => a.value - b.value)
 	}
 
 	private dice(n) {
