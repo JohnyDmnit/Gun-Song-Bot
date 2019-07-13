@@ -16,16 +16,12 @@ export class Player {
 	}
 
 	push(n: number, size: number) {
-		if(n && size) {
-			if (this.availablePower && this.availablePower - n >= 0) {
-				this.availablePower -= n;
-				for (let i = 0; i < n; i++) {
-					let roll = this.dice(size)
-					this.play.push(this.diceList[`d${size}`][roll-1])
-				}
-			}
-			this.play.sort((a, b) => a.value - b.value)
+		this.availablePower -= n;
+		for (let i = 0; i < n; i++) {
+			let roll = this.dice(size)
+			this.play.push(this.diceList[`d${size}`][roll - 1])
 		}
+		this.play.sort((a, b) => a.value - b.value)
 	}
 
 	counter(x: number, xType?: number) {
@@ -40,10 +36,10 @@ export class Player {
 				if (type) {
 					//Implement by type
 				} else {
-					if(playerDie.value === die) {
+					if (playerDie.value === die) {
 						let roll = this.dice(playerDie.size)
-						this.play.splice(j,1)
-						this.play.push(this.diceList[playerDie.type][roll-1])
+						this.play.splice(j, 1)
+						this.play.push(this.diceList[playerDie.type][roll - 1])
 						this.play.sort((a, b) => a.value - b.value)
 						break
 					}
@@ -55,5 +51,5 @@ export class Player {
 	private dice(n) {
 		return Math.ceil(Math.random() * n)
 	}
-	
+
 }

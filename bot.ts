@@ -23,19 +23,18 @@ let players: any[] = [];
 let duel: any[] = [];
 
 function initDice(diceList: any) {
-	client.emojis
-		.forEach(emoji => {
-			if (
-				emoji.name.startsWith('d4') ||
-				emoji.name.startsWith('d6') ||
-				emoji.name.startsWith('d8') ||
-				emoji.name.startsWith('d10')
-			) {
-				let dice: Dice = new Dice(emoji.toString())
-				diceList[dice.type].push(dice)
-				diceList[dice.type].sort((a, b) => a.value - b.value)
-			}
-		})
+	client.emojis.forEach(emoji => {
+		if (
+			emoji.name.startsWith('d4') ||
+			emoji.name.startsWith('d6') ||
+			emoji.name.startsWith('d8') ||
+			emoji.name.startsWith('d10')
+		) {
+			let dice: Dice = new Dice(emoji.toString())
+			diceList[dice.type].push(dice)
+			diceList[dice.type].sort((a, b) => a.value - b.value)
+		}
+	})
 }
 
 function dice(n) {
@@ -84,24 +83,36 @@ client.on('message', msg => {
 		if (msg.content.startsWith('!commit')) {
 			let dice = msg.content.split(' ')[1]
 			if (dice) {
-				players.forEach(player => {
-					if (player.playerData.username === msg.author.username) {
-						const n: number = dice.split('d')[0]
-						const size: number = dice.split('d')[1]
-						player.push(n, size)
-						msg.channel.send(`${msg.author}`)
-						let diceString: string = ''
-						player.play.forEach(dice => {
-							diceString += `${dice.emoji} `
-						});
-						if (diceString) {
-							msg.channel.send(diceString)
-						} else {
-							msg.channel.send('Not enough dice probably, catch this properly :3')
-						}
-					}
-				});
-			}
+				const n: number = parseInt(dice.split('d')[0])
+				const size: number = parseInt(dice.split('d')[1])
+				if (size) {
+					if (n) {
+						if (size === 4 || size === 6 || size === 8 || size === 10) {
+							if (n > 0) {
+								let inFight: boolean = false
+								players.forEach(player => {
+									if (player.playerData.username === msg.author.username) {
+										inFight = true
+										if (player.availablePower - n >= 0) {
+											player.push(n, size)
+											let diceString: string = ''
+											player.play.forEach(dice => {
+												diceString += `${dice.emoji} `
+											});
+											if (diceString) {
+												msg.channel.send(diceString)
+											}
+										} else { msg.channel.send(`Cannot over commit, you currently have ${player.availablePower} power left`) }
+									}
+								});
+								if (!inFight) {
+									msg.channel.send(`${msg.author} has not stepped into the current fight`)
+								}
+							} else { msg.channel.send('Cannot commit 0 or negative dice') }
+						} else { msg.channel.send('Can only commit d4, d6, d8, d10') }
+					} else { msg.channel.send('No ammount of dice specified') }
+				} else { msg.channel.send('No type of dice specified') }
+			} else { msg.channel.send('No dice comitted') }
 		}
 
 		if (msg.content.startsWith('!reroll')) {
