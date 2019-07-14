@@ -1,4 +1,5 @@
 import { Dice } from "./dice";
+import { Ante } from "./ante";
 
 export class Player {
 	playerData: any;
@@ -6,13 +7,17 @@ export class Player {
 	power: number;
 	availablePower: number;
 	diceList: any;
+	antes: Ante[];
+	classType: string;
 
-	constructor(_power: number, data: any, _diceList: any) {
-		this.power = _power
-		this.playerData = data
+	constructor(power: number, data: any, diceList: any, antes: Ante[], classType: string) {
+		this.power = power;
+		this.playerData = data;
 		this.play = [];
-		this.availablePower = _power
-		this.diceList = _diceList
+		this.availablePower = power;
+		this.diceList = diceList;
+		this.antes = antes.map(ante => new Ante(ante.name, ante.power, ante.text))
+		this.classType = classType;
 	}
 
 	push(n: number, size: number) {

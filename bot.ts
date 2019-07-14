@@ -6,6 +6,7 @@ const { Client, RichEmbed } = require('discord.js');
 const client = new Discord.Client();
 const auth = require('./auth.json');
 const guildList = require('./guilds.json');
+const pregens = require('./pregens.json');
 
 
 const botName: string = 'Gun Song Bot'
@@ -53,25 +54,38 @@ function dice(n) {
 	return Math.ceil(Math.random() * n)
 }
 
-function open(msg) {
-	let power: number = parseInt(msg.content.split(' ')[1])
-	if (!!power) {
-		if (players) {
-			let playerExists: boolean = false
-			players.forEach(player => {
-				if (player.playerData.username === msg.author.username) {
-					msg.channel.send(`${player.playerData} has already stepped into the fight`)
-					playerExists = true
-				}
-			});
+function findPlayer(playerData) {
+	for (let i = 0; i < players.length; i++) {
+		const player = players[i];
+		if (player.playerData.username === playerData.username) {
+			return player
+		}
+	}
+}
 
-			if (!playerExists) {
-				players.push(new Player(power, msg.author, diceList))
-				msg.channel.send(`${msg.author} has stepped into the fight with ${power} dice`)
+function open(msg) {
+	let classType: string = msg.content.split(' ')[1].toUpperCase()
+	if (!!classType) {
+		if (players) {
+			let player: Player = findPlayer(msg.author)
+			if (player) {
+				msg.channel.send(`${player.playerData} has already stepped into the fight`)
+			} else {
+				let classExists: boolean = false
+				pregens.slayers.forEach(pregen => {
+					if (pregen.name.toUpperCase() === classType) {
+						classExists = true
+						players.push(new Player(pregen.power, msg.author, diceList, pregen.antes, pregen.name))
+						msg.channel.send(`${msg.author} has stepped into the fight as an ${pregen.name}`)
+					}
+				});
+				if (!classExists) {
+					msg.channel.send('Class doesnt exist, yet?')
+				}
 			}
 		}
 	} else {
-		msg.channel.send(`No power entered`)
+		msg.channel.send(`No class entered`)
 	}
 }
 
@@ -93,19 +107,13 @@ function commit(msg) {
 			if (n) {
 				if (size === 4 || size === 6 || size === 8 || size === 10) {
 					if (n > 0) {
-						let inFight: boolean = false
-						players.forEach(player => {
-							if (player.playerData.username === msg.author.username) {
-								inFight = true
-								if (player.availablePower - n >= 0) {
-									player.push(n, size)
-									msg.channel.send(printDice(player.play))
-								} else { msg.channel.send(`Cannot over commit, you currently have ${player.availablePower} power left`) }
-							}
-						});
-						if (!inFight) {
-							msg.channel.send(`${msg.author} has not stepped into the current fight`)
-						}
+						let player: Player = findPlayer(msg.author)
+						if (player) {
+							if (player.availablePower - n >= 0) {
+								player.push(n, size)
+								msg.channel.send(printDice(player.play))
+							} else { msg.channel.send(`Cannot over commit, you currently have ${player.availablePower} power left`) }
+						} else { msg.channel.send(`${msg.author} has not stepped into the current fight`) }
 					} else { msg.channel.send('Cannot commit 0 or negative dice') }
 				} else { msg.channel.send('Can only commit d4, d6, d8, d10') }
 			} else { msg.channel.send('No ammount of dice specified') }
@@ -115,11 +123,21 @@ function commit(msg) {
 
 
 function remove(msg) {
+	for (let i = 0; i < duels.length; i++) {
+		const duel = duels[i];
+		duel.forEach(participant => {
+			if (participant.playerData.username === msg.author.username) {
+				duels.splice(i, 1)
+			}
+		});
+
+	}
 	for (let i = 0; i < players.length; i++) {
 		const player = players[i];
 		if (player.playerData.username === msg.author.username) {
 			msg.channel.send(`${player.playerData} has been removed`)
 			players.splice(i, 1)
+			break
 		}
 	}
 }
@@ -130,26 +148,39 @@ function reroll(msg) {
 	if (splitMsg[1]) {
 		dice = splitMsg[1].split(',').map(die => parseInt(die))
 	}
-
-	players.forEach(player => {
-		if (player.playerData.username === msg.author.username) {
-			if (player.play.length >= dice.length) {
-				let oldDice: Dice[] = [...player.play]
-				player.reroll(dice)
-				msg.channel.send(`${printDice(oldDice)} -> ${printDice(player.play)}`)
-			} else { msg.channel.send('Cannot reroll more dice than you have') }
-		}
-	})
+	let player: Player = findPlayer(msg.author)
+	if (player) {
+		if (player.play.length >= dice.length) {
+			let oldDice: Dice[] = [...player.play]
+			player.reroll(dice)
+			msg.channel.send(`${printDice(oldDice)} -> ${printDice(player.play)}`)
+		} else { msg.channel.send('Cannot reroll more dice than you have') }
+	}
 }
 
 function help(msg) {
-	msg.channel.send(`
-	!help - print this list
-	!open - step into the fight, need a power, ex: !open 2
-	!commit - commit a number of dice into play, need a number of dice and type, ex !commit 2d6
-	!remove - remove yourself from the fight
-	!reroll - reroll an amount of dice, can be used without argument to reroll all, or specifing which dice ex: !reroll, !reroll 2,2
-	`)
+
+	const embed = new RichEmbed()
+		.setTitle(`Functions`)
+		.setColor(0xFF0000)
+		.setDescription(`
+		!help - print this list
+
+		!open - step into the fight, needs a class, ex: !open assassin
+
+		!commit - commit a number of dice into play, need a number of dice and type, ex !commit 2d6
+
+		!remove - remove yourself from the fight
+
+		!reroll - reroll an amount of dice, can be used without argument to reroll all, or specifing which dice ex: !reroll, !reroll 2,2
+
+		!mydice - display your currently in play dice
+
+		!sheet - display your character sheet
+
+		!fight - fight another player, ex: !fight @Johny
+		`);
+	msg.channel.send(embed);
 }
 
 function counter(msg) {
@@ -198,7 +229,7 @@ function counter(msg) {
 				msg.channel.send(`${printDice(oldDice)} -> ${printDice(playerOne.play)}`)
 			}
 
-			if (counteringType) {
+			if (counteredType) {
 
 			} else {
 				let oldDice: Dice[] = [...playerTwo.play]
@@ -209,6 +240,62 @@ function counter(msg) {
 		} else { msg.channel.send('You are not in a duel') }
 
 	} else { msg.channel.send('Improper arguments') }
+}
+
+function fight(msg) {
+	let playerOne: Player = findPlayer(msg.author)
+	let playerTwo: Player;
+	if (playerOne) {
+		let arg: string = msg.content.split(' ')[1]
+		if (arg) {
+			let otherFighter = client.users.find(user => user.id === arg.split('@')[1].split('>')[0])
+			playerTwo = findPlayer(otherFighter)
+			if (playerTwo) {
+				duels.push([playerOne, playerTwo])
+				msg.channel.send(`${duels[0][0].playerData} fighting ${duels[0][1].playerData}`)
+			} else { msg.channel.send('Other player is not in the fight yet.') }
+		} else { msg.channel.send('Need someone to fight against') }
+	} else { msg.channel.send('Step into the fight first.') }
+}
+
+function sheet(msg) {
+	let player: Player = findPlayer(msg.author)
+
+	if (player) {
+		let anteString = ''
+		player.antes.forEach(ante => {
+			anteString += `
+						${ante.name}: ${ante.power}
+						Availalbe: ${ante.available ? 'Yes' : 'No'}
+						${ante.text}
+
+						`
+		})
+
+		const embed = new RichEmbed()
+			// Set the title of the field
+			.setTitle(`${msg.author.username}'s Character`)
+			// Set the color of the embed
+			.setColor(0xFF0000)
+			// Set the main content of the embed
+			.setDescription(`
+						Class: ${player.classType}
+						Available power: ${player.availablePower}
+						Antes:
+						${anteString}
+						`);
+		// Send the embed to the same channel as the message
+		msg.channel.send(embed);
+	} else {
+		msg.channel.send('You are not in the fight yet.')
+	}
+}
+
+function mydice(msg) {
+	let player: Player = findPlayer(msg.author);
+	if (player) {
+		msg.channel.send(`${msg.author} your dice: ${printDice(player.play)}`)
+	} else { msg.channel.send('You have not stepped into a fight yet.') }
 }
 
 client.on('message', msg => {
@@ -230,55 +317,24 @@ client.on('message', msg => {
 			remove(msg);
 		}
 
+		if (msg.content.startsWith('!sheet')) {
+			sheet(msg);
+		}
+
 		if (msg.content.startsWith('!fight')) {
-			let participant: boolean = false
-			let playerOne: Player;
-			let playeTwo: Player;
-			players.forEach(player => {
-				if (player.playerData.username === msg.author.username) {
-					participant = true
-					playerOne = player
-				}
-			});
-			if (participant) {
-				let arg: string = msg.content.split(' ')[1]
-				if (arg) {
-					let otherFighter = client.users.find(user => user.id === arg.split('@')[1].split('>')[0])
-					let otherParticipant: boolean = false
-					players.forEach(player => {
-						if (player.playerData.username === otherFighter.username) {
-							otherParticipant = true
-							playeTwo = player
-						}
-					});
-					if (otherParticipant) {
-						duels.push([playerOne, playeTwo])
-						msg.channel.send(`${duels[0][0].playerData} fighting ${duels[0][1].playerData}`)
-					} else {
-						msg.channel.send('Other player is not in the fight yet.')
-					}
-				} else { msg.channel.send('Need someone to fight against') }
-			} else {
-				msg.channel.send('Step into the fight first.')
-			}
+			fight(msg);
 		}
 
 		if (msg.content.startsWith('!counter')) {
-			counter(msg)
+			counter(msg);
 		}
-
-
 
 		if (msg.content.startsWith('!reroll')) {
 			reroll(msg);
 		}
 
-		if (msg.content.startsWith('!mydice') {
-			players.forEach(player => {
-				if (player.playerData.username === msg.author.username) {
-					msg.channel.send(`${msg.author} your dice: ${printDice(player.play)}`)
-				}
-			});
+		if (msg.content.startsWith('!mydice')) {
+			mydice(msg);
 		}
 	}
 

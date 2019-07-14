@@ -1,0 +1,25 @@
+{
+	"slayers": [
+		{
+			"name": "Assassin",
+			"power": 2,
+			"antes": [
+				{
+					"name": "Shadow Assault",
+					"power": 3,
+					"text": "Rising Action: Gain a pressure tokens and [Wait]."
+				},
+				{
+					"name": "Poisoned blades",
+					"power": 2,
+					"text": "Action: Spend two pressure tokens to discard two enemy dice from play."
+				},
+				{
+					"name": "Coup de Grace",
+					"power": 1,
+					"text": "Rising Action: Counter one die from the enemy who passed you your turn, then [Take]."
+				}
+			]
+		}
+	]
+}
