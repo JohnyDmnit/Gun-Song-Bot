@@ -20,6 +20,27 @@
 					"text": "Rising Action: Counter one die from the enemy who passed you your turn, then [Take]."
 				}
 			]
+		},
+		{
+			"name": "Berserker",
+			"power": 6,
+			"antes": [
+				{
+					"name": "Onslaught",
+					"power": 3,
+					"text": "Rising Action: [Fight]. This turn, you may choose not to reroll any or all of your pushed dice."
+				},
+				{
+					"name": "Shatter the Weak",
+					"power": 1,
+					"text": "Action: [Fight]. After, if no enemy dice remain in play, you may discard one die from enemies’ Power. This turn, discard all pushed dice."
+				},
+				{
+					"name": "Reckless Strength",
+					"power": 2,
+					"text": "Commit: After you commit dice, discard your lowest die from play"
+				}
+			]
 		}
 	]
 }

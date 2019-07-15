@@ -9,6 +9,8 @@ export class Player {
 	diceList: any;
 	antes: Ante[];
 	classType: string;
+	discard: number;
+	clock: number;
 
 	constructor(power: number, data: any, diceList: any, antes: Ante[], classType: string) {
 		this.power = power;
@@ -18,6 +20,9 @@ export class Player {
 		this.diceList = diceList;
 		this.antes = antes.map(ante => new Ante(ante.name, ante.power, ante.text))
 		this.classType = classType;
+		this.discard = 0
+		this.clock = 2
+
 	}
 
 	push(n: number, size: number) {
@@ -29,23 +34,31 @@ export class Player {
 		this.play.sort((a, b) => a.value - b.value)
 	}
 
+	//Keep all dice removals in here
 	counter(dice: number[], xType?: number) {
 		for (let i = 0; i < dice.length; i++) {
 			const die = dice[i];
 			for (let j = 0; j < this.play.length; j++) {
 				const playerDie = this.play[j];
 				if (die === playerDie.value) {
-					if(xType) {
-						
+					if (xType) {
+
 					} else {
-						this.play.splice(j,1)
+						this.play.splice(j, 1)
+						this.discard++
 						break
 					}
 				}
-				
 			}
-			
 		}
+	}
+
+	cut(recover: boolean) {
+		if (recover) {
+			this.discard -= this.clock;
+			this.availablePower++;
+		}
+		this.clock++;
 	}
 
 	reroll(dice: number[], type?: string) {
@@ -60,12 +73,12 @@ export class Player {
 					const playerDie = this.play[j];
 					if (playerDie.value === die) {
 						if (type) {
-							
+
 						} else {
 							let roll = this.dice(playerDie.size)
-						newPlay.splice(j, 1)
-						newPlay.push(this.diceList[playerDie.type][roll - 1])
-						break
+							newPlay.splice(j, 1)
+							newPlay.push(this.diceList[playerDie.type][roll - 1])
+							break
 						}
 					}
 				}

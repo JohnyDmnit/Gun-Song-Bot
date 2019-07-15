@@ -63,7 +63,7 @@ function findPlayer(playerData) {
 	}
 }
 
-function open(msg) {
+function enter(msg) {
 	let classType: string = msg.content.split(' ')[1].toUpperCase()
 	if (!!classType) {
 		if (players) {
@@ -76,7 +76,7 @@ function open(msg) {
 					if (pregen.name.toUpperCase() === classType) {
 						classExists = true
 						players.push(new Player(pregen.power, msg.author, diceList, pregen.antes, pregen.name))
-						msg.channel.send(`${msg.author} has stepped into the fight as an ${pregen.name}`)
+						msg.channel.send(`${msg.author} has stepped into the fight as The ${pregen.name}`)
 					}
 				});
 				if (!classExists) {
@@ -112,17 +112,17 @@ function commit(msg) {
 							if (player.availablePower - n >= 0) {
 								player.push(n, size)
 								msg.channel.send(printDice(player.play))
-							} else { msg.channel.send(`Cannot over commit, you currently have ${player.availablePower} power left`) }
-						} else { msg.channel.send(`${msg.author} has not stepped into the current fight`) }
-					} else { msg.channel.send('Cannot commit 0 or negative dice') }
-				} else { msg.channel.send('Can only commit d4, d6, d8, d10') }
-			} else { msg.channel.send('No ammount of dice specified') }
-		} else { msg.channel.send('No type of dice specified') }
-	} else { msg.channel.send('No dice comitted') }
+							} else { msg.channel.send(`Cannot over commit, you currently have ${player.availablePower} power left.`) }
+						} else { msg.channel.send(`${msg.author} has not stepped into the current fight.`) }
+					} else { msg.channel.send('Cannot commit 0 or negative dice.') }
+				} else { msg.channel.send('Can only commit d4, d6, d8, d10.') }
+			} else { msg.channel.send('No ammount of dice specified.') }
+		} else { msg.channel.send('No type of dice specified.') }
+	} else { msg.channel.send('No dice comitted.') }
 }
 
 
-function remove(msg) {
+function leave(msg) {
 	for (let i = 0; i < duels.length; i++) {
 		const duel = duels[i];
 		duel.forEach(participant => {
@@ -135,7 +135,7 @@ function remove(msg) {
 	for (let i = 0; i < players.length; i++) {
 		const player = players[i];
 		if (player.playerData.username === msg.author.username) {
-			msg.channel.send(`${player.playerData} has been removed`)
+			msg.channel.send(`${player.playerData} has stepped out.`)
 			players.splice(i, 1)
 			break
 		}
@@ -166,11 +166,11 @@ function help(msg) {
 		.setDescription(`
 		!help - print this list
 
-		!open - step into the fight, needs a class, ex: !open assassin
+		!enter - step into the fight, needs a class, ex: !enter assassin
 
 		!commit - commit a number of dice into play, need a number of dice and type, ex !commit 2d6
 
-		!remove - remove yourself from the fight
+		!leave - step out of the fight
 
 		!reroll - reroll an amount of dice, can be used without argument to reroll all, or specifing which dice ex: !reroll, !reroll 2,2
 
@@ -185,61 +185,95 @@ function help(msg) {
 
 function counter(msg) {
 	let arg: string = msg.content.split(' ')
-	if (arg.length === 4) {
-		let isDueling: boolean = false;
-		let playerOne: Player;
-		let playerTwo: Player;
-		let currentDuel: any[];
 
-		duels.forEach(duel => {
-			duel.forEach(participant => {
-				if (participant.playerData.username === msg.author.username) {
-					isDueling = true
-					currentDuel = [...duel]
-				}
-			});
+	let isDueling: boolean = false;
+	let playerOne: Player;
+	let playerTwo: Player;
+	let currentDuel: any[];
+
+	duels.forEach(duel => {
+		duel.forEach(participant => {
+			if (participant.playerData.username === msg.author.username) {
+				isDueling = true
+				currentDuel = [...duel]
+			}
 		});
+	});
 
-		if (isDueling) {
-			if (currentDuel[0].playerData.username === msg.author.username) {
-				playerOne = currentDuel[0]
-				playerTwo = currentDuel[1]
-			} else {
-				playerOne = currentDuel[1]
-				playerTwo = currentDuel[0]
-			}
+	if (isDueling) {
+		if (currentDuel[0].playerData.username === msg.author.username) {
+			playerOne = currentDuel[0]
+			playerTwo = currentDuel[1]
+		} else {
+			playerOne = currentDuel[1]
+			playerTwo = currentDuel[0]
+		}
 
-			let counteredDice: number[] = arg[1]
-				.split('/')[0]
-				.split(',')
-				.map(x => parseInt(x))
-			let counteredType: string = arg[1].split('/')[1]
-			let counteringDice: number[] = arg[3]
-				.split('/')[0]
-				.split(',')
-				.map(x => parseInt(x))
-			let counteringType: string = arg[3].split('/')[1]
+		switch (arg.length) {
+			case 1:
+				let counterArr: number[] = []
+				let rerollArr: number[] = []
+				let oldDiceOne: Dice[] = [...playerOne.play]
+				let oldDiceTwo: Dice[] = [...playerTwo.play]
+				for (let i = 0; i < playerOne.play.length; i++) {
+					const counteringDie = playerOne.play[i];
+					for (let j = playerTwo.play.length - 1; j >= 0; j--) {
+						const counteredDie = playerTwo.play[j];
+						if (counteringDie.value >= counteredDie.value) {
+							rerollArr.push(counteringDie.value);
+							playerTwo.counter([counteredDie.value])
+							break;
+						}
+					}
+				}
+				if (rerollArr.length > 0) {
+					playerOne.reroll(rerollArr)
+					msg.channel.send(`${printDice(oldDiceOne)} -> ${printDice(playerOne.play)}`)
+					msg.channel.send(`${printDice(oldDiceTwo)} -> ${printDice(playerTwo.play)}`)
+				} else {
+					msg.channel.send('Nothing was countered.')
+				}
 
-			if (counteringType) {
 
-			} else {
-				let oldDice: Dice[] = playerOne.play
-				playerOne.reroll(counteringDice)
-				msg.channel.send(`${playerOne.playerData}`)
-				msg.channel.send(`${printDice(oldDice)} -> ${printDice(playerOne.play)}`)
-			}
+				break;
 
-			if (counteredType) {
+			case 4:
+				let counteredDice: number[] = arg[1]
+					.split('/')[0]
+					.split(',')
+					.map(x => parseInt(x))
+				let counteredType: string = arg[1].split('/')[1]
+				let counteringDice: number[] = arg[3]
+					.split('/')[0]
+					.split(',')
+					.map(x => parseInt(x))
+				let counteringType: string = arg[3].split('/')[1]
 
-			} else {
-				let oldDice: Dice[] = [...playerTwo.play]
-				playerTwo.counter(counteredDice)
-				msg.channel.send(`${playerTwo.playerData}`)
-				msg.channel.send(`${printDice(oldDice)} -> ${printDice(playerTwo.play)}`)
-			}
-		} else { msg.channel.send('You are not in a duel') }
+				if (counteringType) {
 
-	} else { msg.channel.send('Improper arguments') }
+				} else {
+					let oldDice: Dice[] = playerOne.play
+					playerOne.reroll(counteringDice)
+					msg.channel.send(`${playerOne.playerData}`)
+					msg.channel.send(`${printDice(oldDice)} -> ${printDice(playerOne.play)}`)
+				}
+
+				if (counteredType) {
+
+				} else {
+					let oldDice: Dice[] = [...playerTwo.play]
+					playerTwo.counter(counteredDice)
+					msg.channel.send(`${playerTwo.playerData}`)
+					msg.channel.send(`${printDice(oldDice)} -> ${printDice(playerTwo.play)}`)
+				}
+				break;
+
+			default:
+				msg.channel.send('Improper arguments')
+				break;
+		}
+	} else { msg.channel.send('You are not in a duel') }
+
 }
 
 function fight(msg) {
@@ -306,15 +340,15 @@ client.on('message', msg => {
 		if (msg.content.startsWith('!help')) {
 			help(msg);
 		}
-		if (msg.content.startsWith('!open')) {
-			open(msg);
+		if (msg.content.startsWith('!enter')) {
+			enter(msg);
 		}
 		if (msg.content.startsWith('!commit')) {
 			commit(msg);
 		}
 
-		if (msg.content.startsWith('!remove')) {
-			remove(msg);
+		if (msg.content.startsWith('!leave')) {
+			leave(msg);
 		}
 
 		if (msg.content.startsWith('!sheet')) {
@@ -336,8 +370,64 @@ client.on('message', msg => {
 		if (msg.content.startsWith('!mydice')) {
 			mydice(msg);
 		}
-	}
 
+		if (msg.content.startsWith('!slayers')) {
+
+			pregens.slayers.forEach(slayer => {
+				let anteString = ''
+				slayer.antes.forEach(ante => {
+					anteString += `
+							${ante.name}: ${ante.power}
+							${ante.text}
+	
+							`
+				})
+
+				const embed = new RichEmbed()
+					// Set the title of the field
+					.setTitle(`${slayer.name}`)
+					// Set the color of the embed
+					.setColor(0xFF0000)
+					// Set the main content of the embed
+					.setDescription(`
+						Power: ${slayer.power}
+						Antes:
+						${anteString}
+						`);
+				// Send the embed to the same channel as the message
+				msg.channel.send(embed);
+			});
+		}
+
+		if (msg.content.startsWith('!cut')) {
+			let player = findPlayer(msg.author)
+			if (player) {
+				if (player.discard >= player.clock) {
+					player.cut(true)
+					msg.channel.send(`Your clock is now ${player.clock}, you recovered 1 die`)
+				} else {
+					player.cut(false)
+					msg.channel.send(`Your clock is now ${player.clock}, you have not recovered any dice`)
+				}
+			} else { msg.channel.send('Not in a fight yet.') }
+		}
+
+		if (msg.content.startsWith('!discard')) {
+			let player = findPlayer(msg.author)
+			let splitMsg = msg.content.split(' ')
+			if (player) {
+				if (player.play.length) {
+					let dice = splitMsg[1].split(',').map(x => parseInt(x))
+					player.counter(dice)
+					let diceString = ''
+					dice.forEach(die => {
+						diceString += `${diceList.d6[die - 1].emoji} `
+					});
+					msg.channel.send(`${diceString} discarded`)
+				} else { msg.channel.send('Nothing to discard.') }
+			} else { msg.channel.send('Not in a fight yet.') }
+		}
+	}
 });
 
 
