@@ -11,8 +11,12 @@ export class Player {
 	classType: string;
 	discard: number;
 	clock: number;
+	pressure: number;
+	pressureTokens: number;
 
 	constructor(power: number, data: any, diceList: any, antes: Ante[], classType: string) {
+		this.pressure = 0;
+		this.pressureTokens = 0;
 		this.power = power;
 		this.playerData = data;
 		this.play = [];
@@ -25,13 +29,45 @@ export class Player {
 
 	}
 
-	push(n: number, size: number) {
+	push(n: number, size: number = 6) {
 		this.availablePower -= n;
+		this.pressureTokens = 0;
 		for (let i = 0; i < n; i++) {
 			let roll = this.dice(size)
 			this.play.push(this.diceList[`d${size}`][roll - 1])
 		}
 		this.play.sort((a, b) => a.value - b.value)
+		this.pressure = this.play.length + this.pressureTokens
+	}
+
+	press() {
+		this.pressureTokens += 1
+		this.pressure = this.play.length + this.pressureTokens
+		return this.pressure
+	}
+
+	ante(name: string) {
+		this.pressureTokens = 0
+		let anteExists: boolean = false
+		let foundAnte: Ante;
+		for (let i = 0; i < this.antes.length; i++) {
+			const ante = this.antes[i];
+			if (ante.name.toUpperCase().startsWith(name.toUpperCase()) && ante.available) {
+				anteExists = true
+				foundAnte = ante
+				ante.available = false
+				this.availablePower += ante.power
+				this.push(ante.power)
+				break
+			}
+		}
+
+		this.pressure = this.play.length + this.pressureTokens
+		if (anteExists) {
+			return foundAnte
+		} else {
+			return null
+		}
 	}
 
 	//Keep all dice removals in here

@@ -1,5 +1,6 @@
 import { Player } from "./player";
 import { Dice } from "./dice";
+import { Ante } from "./ante";
 
 const Discord = require('discord.js');
 const { Client, RichEmbed } = require('discord.js');
@@ -315,6 +316,7 @@ function sheet(msg) {
 			.setDescription(`
 						Class: ${player.classType}
 						Available power: ${player.availablePower}
+						Current Pressure: ${player.pressure}
 						Antes:
 						${anteString}
 						`);
@@ -369,6 +371,31 @@ client.on('message', msg => {
 
 		if (msg.content.startsWith('!mydice')) {
 			mydice(msg);
+		}
+
+		if (msg.content.startsWith('!press')) {
+			let player: Player = findPlayer(msg.author) 
+			if (player) {
+				msg.channel.send(`[Press], current pressure: ${player.press()}`)
+			}
+		}
+
+		if (msg.content.startsWith('!ante')) {
+			let args = msg.content.split(' ')
+
+			if (args.length >= 2) {
+				let anteName = args[1]
+				let player = findPlayer(msg.author)
+				let diceString
+				if (player) {
+					let ante: Ante = player.ante(anteName)
+					if (!!ante) {
+						msg.channel.send(`
+						${ante.name}: ${ante.power}, used
+						`)
+					} else { msg.channel.send('Ante not found/Ante used')}
+				}
+			} else { msg.channel.send('Enter an ante.')}
 		}
 
 		if (msg.content.startsWith('!slayers')) {
