@@ -180,6 +180,14 @@ function help(msg) {
 		!sheet - display your character sheet
 
 		!fight - fight another player, ex: !fight @Johny
+
+		!slayers - display available slayers
+
+		!press - gain a pressure token
+
+		!cut - regain a dice if you have enough discarded dice
+
+		!discard - discard your own dice ex: !discard 1,2,3
 		`);
 	msg.channel.send(embed);
 }
@@ -317,6 +325,7 @@ function sheet(msg) {
 						Class: ${player.classType}
 						Available power: ${player.availablePower}
 						Current Pressure: ${player.pressure}
+						Dice in discard: ${player.discard}
 						Antes:
 						${anteString}
 						`);
