@@ -87,6 +87,7 @@ export class Player {
 				}
 			}
 		}
+		this.pressure = this.play.length + this.pressureTokens
 	}
 
 	cut(recover: boolean) {
