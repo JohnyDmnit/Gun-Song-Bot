@@ -309,7 +309,7 @@ function sheet(msg) {
 		player.antes.forEach(ante => {
 			anteString += `
 						${ante.name}: ${ante.power}
-						Availalbe: ${ante.available ? 'Yes' : 'No'}
+						Available: ${ante.available ? 'Yes' : 'No'}
 						${ante.text}
 
 						`
