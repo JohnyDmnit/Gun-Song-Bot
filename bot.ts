@@ -8,7 +8,7 @@ const client = new Discord.Client();
 const auth = require('./auth.json');
 const guildList = require('./guilds.json');
 const pregens = require('./pregens.json');
-
+const tokenEmoji = '▫'
 
 const botName: string = 'Gun Song Bot'
 let diceList = {
@@ -44,11 +44,35 @@ function initDice(diceList: any) {
 			emoji.name.startsWith('d8') ||
 			emoji.name.startsWith('d10')
 		) {
-			let dice: Dice = new Dice(emoji.toString())
+			const dice: Dice = new Dice(emoji.toString())
 			diceList[dice.type].push(dice)
 			diceList[dice.type].sort((a, b) => a.value - b.value)
 		}
 	})
+	if (diceList.d4.length === 0) {
+		for (let i = 0; i < 4; i++) {
+			const dice: Dice = new Dice(`d4_${i+1}`)
+			diceList.d4.push(dice)
+		}
+	}
+	if (diceList.d6.length === 0) {
+		for (let i = 0; i < 6; i++) {
+			const dice: Dice = new Dice(`d6_${i+1}`)
+			diceList.d6.push(dice)
+		}
+	}
+	if (diceList.d8.length === 0) {
+		for (let i = 0; i < 8; i++) {
+			const dice: Dice = new Dice(`d8_${i+1}`)
+			diceList.d8.push(dice)
+		}
+	}
+	if (diceList.d10.length === 0) {
+		for (let i = 0; i < 10; i++) {
+			const dice: Dice = new Dice(`d10_${i+1}`)
+			diceList.d10.push(dice)
+		}
+	}
 }
 
 function dice(n) {
@@ -90,11 +114,18 @@ function enter(msg) {
 	}
 }
 
-function printDice(dice: Dice[]) {
+function printDice(dice: Dice[], pressureTokens?: number) {
+	console.log
+	const length = dice.length
 	let diceString: string = ''
-	for (let i = 0; i < dice.length; i++) {
+	for (let i = 0; i < length; i++) {
 		const die = dice[i];
 		diceString += `${die.emoji} `
+	}
+	if (pressureTokens) {
+		for (let i = 0; i < pressureTokens; i++) {
+			diceString += `${tokenEmoji} `
+		}
 	}
 	return diceString
 }
@@ -112,7 +143,7 @@ function commit(msg) {
 						if (player) {
 							if (player.availablePower - n >= 0) {
 								player.push(n, size)
-								msg.channel.send(printDice(player.play))
+								msg.channel.send(printDice(player.play, player.pressureTokens))
 							} else { msg.channel.send(`Cannot over commit, you currently have ${player.availablePower} power left.`) }
 						} else { msg.channel.send(`${msg.author} has not stepped into the current fight.`) }
 					} else { msg.channel.send('Cannot commit 0 or negative dice.') }
@@ -356,7 +387,9 @@ function ante(msg) {
 function mydice(msg) {
 	let player: Player = findPlayer(msg.author);
 	if (player) {
-		msg.channel.send(`${msg.author} your dice: ${printDice(player.play)}`)
+		msg.channel.send(`${msg.author} your dice: ${printDice(player.play, player.pressureTokens)}
+		Total pressure: ${player.pressure}
+		`)
 	} else { msg.channel.send('You have not stepped into a fight yet.') }
 }
 
@@ -427,7 +460,7 @@ function discard(msg) {
 client.on('message', msg => {
 	if (msg.author.username != botName) {
 		if (msg.content.startsWith('!emojitest')) {
-			msg.channel.send(diceList.d6.map(emoji => emoji.emoji))
+			msg.channel.send('▫')
 		}
 		if (msg.content.startsWith('!help')) {
 			help(msg);
@@ -471,6 +504,15 @@ client.on('message', msg => {
 		if (msg.content.startsWith('!discard')) {
 			discard(msg);
 		}
+		// if (msg.content.startsWith('!myPressure')) {
+		// 	const player: Player = findPlayer(msg.author)
+		// 	if (player) {
+		// 		let diceString: string = printDice(player)
+		// 		if (diceString != '') {
+		// 			msg.channel.send(`Your pressure is currently ${player.pressure}: ` + diceString)
+		// 		} else { msg.channel.send('Your pressure is 0') }
+		// 	} else { msg.channel.send('Not in a fight.') }
+		// }
 		if (msg.content.startsWith('!setPressure')) {
 			const args: string = msg.content.split(' ')
 			const player: Player = findPlayer(msg.author)
@@ -480,9 +522,9 @@ client.on('message', msg => {
 				if (newPressure >= 0 && newPressure >= length) {
 					player.pressure = newPressure
 					player.pressureTokens = newPressure - length
-					msg.channel.send (`Pressure set to ${newPressure}, out of which ${length} dice and ${newPressure-length} tokens`)
-				}
-			}
+					msg.channel.send(`Pressure set to ${newPressure}, out of which ${length} dice and ${newPressure - length} tokens`)
+				} else { msg.channel.send('New pressure cant be smaller than 0 or smaller than the amount of dice you have out') }
+			} else { msg.channel.send('Not in a fight.') }
 		}
 		if (msg.content.startsWith('!setPower')) {
 			const args: string = msg.content.split(' ')
