@@ -46,9 +46,9 @@ export class Player {
 		return this._play
 	}
 	
-	public set power(v : number) {
-		this._power = v;
-	}
+	// public set power(v : number) {
+	// 	this._power = v;
+	// }
 	
 	public get power() : number {
 		return this._power
@@ -85,7 +85,7 @@ export class Player {
 	public get discard() : number {
 		return this._discard
 	}
-	
+
 	public set clock(v : number) {
 		this._clock = v;
 	}

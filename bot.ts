@@ -325,6 +325,7 @@ function sheet(msg) {
 						Class: ${player.classType}
 						Available power: ${player.availablePower}
 						Current Pressure: ${player.pressure}
+						Pressure tokens: ${player.pressureTokens}
 						Dice in discard: ${player.discard}
 						Antes:
 						${anteString}
@@ -336,11 +337,91 @@ function sheet(msg) {
 	}
 }
 
+function ante(msg) {
+	let args = msg.content.split(' ')
+	if (args.length >= 2) {
+		let anteName = args[1]
+		let player = findPlayer(msg.author)
+		let diceString
+		if (player) {
+			let ante: Ante = player.ante(anteName)
+			if (!!ante) {
+				msg.channel.send(`
+						${ante.name}: ${ante.power}, used
+						`)
+			} else { msg.channel.send('Ante not found/Ante used') }
+		}
+	} else { msg.channel.send('Enter an ante.') }
+}
 function mydice(msg) {
 	let player: Player = findPlayer(msg.author);
 	if (player) {
 		msg.channel.send(`${msg.author} your dice: ${printDice(player.play)}`)
 	} else { msg.channel.send('You have not stepped into a fight yet.') }
+}
+
+function cut(msg) {
+	let player = findPlayer(msg.author)
+	if (player) {
+		if (player.discard >= player.clock) {
+			player.cut(true)
+			msg.channel.send(`Your clock is now ${player.clock}, you recovered 1 die`)
+		} else {
+			player.cut(false)
+			msg.channel.send(`Your clock is now ${player.clock}, you have not recovered any dice`)
+		}
+	} else { msg.channel.send('Not in a fight yet.') }
+}
+
+function press(msg) {
+	let player: Player = findPlayer(msg.author)
+	if (player) {
+		msg.channel.send(`[Press], current pressure: ${player.press()}`)
+	}
+}
+
+function slayers(msg) {
+
+	pregens.slayers.forEach(slayer => {
+		let anteString = ''
+		slayer.antes.forEach(ante => {
+			anteString += `
+					${ante.name}: ${ante.power}
+					${ante.text}
+
+					`
+		})
+
+		const embed = new RichEmbed()
+			// Set the title of the field
+			.setTitle(`${slayer.name}`)
+			// Set the color of the embed
+			.setColor(0xFF0000)
+			// Set the main content of the embed
+			.setDescription(`
+				Power: ${slayer.power}
+				Antes:
+				${anteString}
+				`);
+		// Send the embed to the same channel as the message
+		msg.channel.send(embed);
+	});
+}
+
+function discard(msg) {
+	let player = findPlayer(msg.author)
+	let splitMsg = msg.content.split(' ')
+	if (player) {
+		if (player.play.length) {
+			let dice = splitMsg[1].split(',').map(x => parseInt(x))
+			player.counter(dice)
+			let diceString = ''
+			dice.forEach(die => {
+				diceString += `${diceList.d6[die - 1].emoji} `
+			});
+			msg.channel.send(`${diceString} discarded`)
+		} else { msg.channel.send('Nothing to discard.') }
+	} else { msg.channel.send('Not in a fight yet.') }
 }
 
 client.on('message', msg => {
@@ -357,112 +438,65 @@ client.on('message', msg => {
 		if (msg.content.startsWith('!commit')) {
 			commit(msg);
 		}
-
 		if (msg.content.startsWith('!leave')) {
 			leave(msg);
 		}
-
 		if (msg.content.startsWith('!sheet')) {
 			sheet(msg);
 		}
-
 		if (msg.content.startsWith('!fight')) {
 			fight(msg);
 		}
-
 		if (msg.content.startsWith('!counter')) {
 			counter(msg);
 		}
-
 		if (msg.content.startsWith('!reroll')) {
 			reroll(msg);
 		}
-
 		if (msg.content.startsWith('!mydice')) {
 			mydice(msg);
 		}
-
 		if (msg.content.startsWith('!press')) {
-			let player: Player = findPlayer(msg.author) 
+			press(msg);
+		}
+		if (msg.content.startsWith('!ante')) {
+			ante(msg);
+		}
+		if (msg.content.startsWith('!slayers')) {
+			slayers(msg);
+		}
+		if (msg.content.startsWith('!cut')) {
+			cut(msg);
+		}
+		if (msg.content.startsWith('!discard')) {
+			discard(msg);
+		}
+		if (msg.content.startsWith('!setPressure')) {
+			const args: string = msg.content.split(' ')
+			const player: Player = findPlayer(msg.author)
 			if (player) {
-				msg.channel.send(`[Press], current pressure: ${player.press()}`)
+				const length = player.play.length
+				const newPressure: number = parseInt(args[1])
+				if (newPressure >= 0 && newPressure >= length) {
+					player.pressure = newPressure
+					player.pressureTokens = newPressure - length
+					msg.channel.send (`Pressure set to ${newPressure}, out of which ${length} dice and ${newPressure-length} tokens`)
+				}
+			}
+		}
+		if (msg.content.startsWith('!setPower')) {
+			const args: string = msg.content.split(' ')
+			const player: Player = findPlayer(msg.author)
+			if (player) {
+				const length = player.play.length
+				const newPower: number = parseInt(args[1])
+				if (newPower >= 0) {
+					player.availablePower = newPower
+					msg.channel.send(`Power set to ${newPower}`)
+				}
 			}
 		}
 
-		if (msg.content.startsWith('!ante')) {
-			let args = msg.content.split(' ')
-
-			if (args.length >= 2) {
-				let anteName = args[1]
-				let player = findPlayer(msg.author)
-				let diceString
-				if (player) {
-					let ante: Ante = player.ante(anteName)
-					if (!!ante) {
-						msg.channel.send(`
-						${ante.name}: ${ante.power}, used
-						`)
-					} else { msg.channel.send('Ante not found/Ante used')}
-				}
-			} else { msg.channel.send('Enter an ante.')}
-		}
-
-		if (msg.content.startsWith('!slayers')) {
-
-			pregens.slayers.forEach(slayer => {
-				let anteString = ''
-				slayer.antes.forEach(ante => {
-					anteString += `
-							${ante.name}: ${ante.power}
-							${ante.text}
-	
-							`
-				})
-
-				const embed = new RichEmbed()
-					// Set the title of the field
-					.setTitle(`${slayer.name}`)
-					// Set the color of the embed
-					.setColor(0xFF0000)
-					// Set the main content of the embed
-					.setDescription(`
-						Power: ${slayer.power}
-						Antes:
-						${anteString}
-						`);
-				// Send the embed to the same channel as the message
-				msg.channel.send(embed);
-			});
-		}
-
-		if (msg.content.startsWith('!cut')) {
-			let player = findPlayer(msg.author)
-			if (player) {
-				if (player.discard >= player.clock) {
-					player.cut(true)
-					msg.channel.send(`Your clock is now ${player.clock}, you recovered 1 die`)
-				} else {
-					player.cut(false)
-					msg.channel.send(`Your clock is now ${player.clock}, you have not recovered any dice`)
-				}
-			} else { msg.channel.send('Not in a fight yet.') }
-		}
-
-		if (msg.content.startsWith('!discard')) {
-			let player = findPlayer(msg.author)
-			let splitMsg = msg.content.split(' ')
-			if (player) {
-				if (player.play.length) {
-					let dice = splitMsg[1].split(',').map(x => parseInt(x))
-					player.counter(dice)
-					let diceString = ''
-					dice.forEach(die => {
-						diceString += `${diceList.d6[die - 1].emoji} `
-					});
-					msg.channel.send(`${diceString} discarded`)
-				} else { msg.channel.send('Nothing to discard.') }
-			} else { msg.channel.send('Not in a fight yet.') }
-		}
 	}
 });
 
