@@ -14,6 +14,7 @@ export class Player {
 	private _clock: number;
 	private _pressure: number;
 	private _pressureTokens: number;
+	private _duel: string;
 
 	constructor(power: number, data: any, diceList: any, antes: Ante[], classType: string) {
 		this._pressure = 0;
@@ -27,6 +28,7 @@ export class Player {
 		this._classType = classType;
 		this._discard = 0
 		this._clock = 2
+		this._duel = ''
 
 	}
 
@@ -110,15 +112,26 @@ export class Player {
 		return this._pressureTokens
 	}
 	
+	public set duel(v : string) {
+		this._duel = v;
+	}
 	
-	push(n: number, size: number = 6) {
-		this._availablePower -= n;
-		this._pressureTokens = 0;
+	public get duel() : string {
+		return this._duel
+	}
+	
+	addDice(n: number, size: number = 6){
 		for (let i = 0; i < n; i++) {
 			let roll = this.dice(size)
 			this._play.push(this._diceList[`d${size}`][roll - 1])
 		}
 		this._play.sort((a, b) => a.value - b.value)
+	}
+
+	push(n: number, size: number = 6) {
+		this._availablePower -= n;
+		this._pressureTokens = 0;
+		this.addDice(n, size)
 		this._pressure = this._play.length + this._pressureTokens
 	}
 
@@ -138,8 +151,7 @@ export class Player {
 				anteExists = true
 				foundAnte = ante
 				ante.available = false
-				this._availablePower += ante.power
-				this.push(ante.power)
+				this.addDice(ante.power)
 				break
 			}
 		}

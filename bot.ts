@@ -1,12 +1,12 @@
 import { Player } from "./player";
 import { Dice } from "./dice";
 import { Ante } from "./ante";
+import { Guild, User, Message } from "./node_modules/discord.js/src/"
 
 const Discord = require('discord.js');
-const { Client, RichEmbed } = require('discord.js');
+const { RichEmbed } = require('discord.js');
 const client = new Discord.Client();
 const auth = require('./auth.json');
-const guildList = require('./guilds.json');
 const pregens = require('./pregens.json');
 const tokenEmoji = '▫'
 
@@ -26,16 +26,9 @@ client.on('ready', () => {
 });
 
 let players: Player[] = [];
-let duels: any[] = [];
-let gsGuild: any;
-function initGunSongGuild(guildId: number) {
-	client.guilds.forEach(guild => {
-		if (guild.id === guildId) {
-			gsGuild = guild
-		}
-	});
-}
+let duels: string[] = [];
 
+//Initialize the dice list with emojis and proper dice objects
 function initDice(diceList: any) {
 	client.emojis.forEach(emoji => {
 		if (
@@ -49,37 +42,21 @@ function initDice(diceList: any) {
 			diceList[dice.type].sort((a, b) => a.value - b.value)
 		}
 	})
-	if (diceList.d4.length === 0) {
-		for (let i = 0; i < 4; i++) {
-			const dice: Dice = new Dice(`d4_${i+1}`)
-			diceList.d4.push(dice)
-		}
-	}
-	if (diceList.d6.length === 0) {
-		for (let i = 0; i < 6; i++) {
-			const dice: Dice = new Dice(`d6_${i+1}`)
-			diceList.d6.push(dice)
-		}
-	}
-	if (diceList.d8.length === 0) {
-		for (let i = 0; i < 8; i++) {
-			const dice: Dice = new Dice(`d8_${i+1}`)
-			diceList.d8.push(dice)
-		}
-	}
-	if (diceList.d10.length === 0) {
-		for (let i = 0; i < 10; i++) {
-			const dice: Dice = new Dice(`d10_${i+1}`)
-			diceList.d10.push(dice)
-		}
-	}
 }
 
-function dice(n) {
-	return Math.ceil(Math.random() * n)
+//Generate a random string
+function generateRandomString(length: number) {
+	const characters: string = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+	const charactersLength = characters.length;
+	let res: string = ''
+	for (let i = 0; i < length; i++) {
+		res += characters[Math.floor(Math.random() * charactersLength)];
+	}
+	return res
 }
 
-function findPlayer(playerData) {
+//Find a player in the current fight
+function findPlayer(playerData: User): Player {
 	for (let i = 0; i < players.length; i++) {
 		const player = players[i];
 		if (player.playerData.username === playerData.username) {
@@ -87,34 +64,37 @@ function findPlayer(playerData) {
 		}
 	}
 }
-
-function enter(msg) {
-	let classType: string = msg.content.split(' ')[1].toUpperCase()
-	if (!!classType) {
-		if (players) {
-			let player: Player = findPlayer(msg.author)
-			if (player) {
-				msg.channel.send(`${player.playerData} has already stepped into the fight`)
-			} else {
-				let classExists: boolean = false
-				pregens.slayers.forEach(pregen => {
-					if (pregen.name.toUpperCase() === classType) {
-						classExists = true
-						players.push(new Player(pregen.power, msg.author, diceList, pregen.antes, pregen.name))
-						msg.channel.send(`${msg.author} has stepped into the fight as The ${pregen.name}`)
-					}
-				});
-				if (!classExists) {
-					msg.channel.send('Class doesnt exist, yet?')
-				}
-			}
+//Find a player in the server the message was sent in by Id.
+function findPlayerById(userId: string, guild: Guild): Player {
+	for (let i = 0; i < guild.members.length; i++) {
+		const member = guild.members[i];
+		if (member.id === userId) {
+			return findPlayer(member)
 		}
-	} else {
-		msg.channel.send(`No class entered`)
 	}
 }
+//Find a slayer in the pregens json
+function findSlayer(slayerName: string) {
+	for (let i = 0; i < pregens.slayers.length; i++) {
+		const slayer = pregens.slayers[i];
+		if (slayer.name.toUpperCase().startsWith(slayerName.toUpperCase())) {
+			return slayer;
+		}
+	}
+}
+//Find duel participants by duel id
+function findDuelParticipants(duelId: string): Player[] {
+	let participants: Player[] = []
+	for (let i = 0; i < players.length; i++) {
+		const player = players[i];
+		if (player.duel === duelId) {
+			participants.push(player)
+		}
+	}
+	return participants
+}
 
-function printDice(dice: Dice[], pressureTokens?: number) {
+function printDice(dice: Dice[], pressureTokens?: number): string {
 	console.log
 	const length = dice.length
 	let diceString: string = ''
@@ -130,8 +110,27 @@ function printDice(dice: Dice[], pressureTokens?: number) {
 	return diceString
 }
 
-function commit(msg) {
-	let dice = msg.content.split(' ')[1]
+function enter(msg: Message, player: Player) {
+	let classType: string = msg.content.split(' ')[1].toUpperCase()
+	if (!!classType) {
+		if (players) {
+			if (player) {
+				msg.channel.send(`${player.playerData} has already stepped into the fight`)
+			} else {
+				let slayer = findSlayer(classType)
+				if (slayer) {
+					players.push(new Player(slayer.power, msg.author, diceList, slayer.antes, slayer.name))
+					msg.channel.send(`${msg.author} has stepped into the fight as The ${slayer.name}`)
+				} else { msg.channel.send('Class doesnt exist, yet?') }
+			}
+		}
+	} else {
+		msg.channel.send(`No class entered`)
+	}
+}
+
+function commit(msg: Message, args: string[], player: Player) {
+	let dice = args[1]
 	if (dice) {
 		const n: number = parseInt(dice.split('d')[0])
 		const size: number = parseInt(dice.split('d')[1])
@@ -139,7 +138,6 @@ function commit(msg) {
 			if (n) {
 				if (size === 4 || size === 6 || size === 8 || size === 10) {
 					if (n > 0) {
-						let player: Player = findPlayer(msg.author)
 						if (player) {
 							if (player.availablePower - n >= 0) {
 								player.push(n, size)
@@ -153,17 +151,16 @@ function commit(msg) {
 	} else { msg.channel.send('No dice comitted.') }
 }
 
+function leave(msg: Message) {
+	// for (let i = 0; i < duels.length; i++) {
+	// 	const duel = duels[i];
+	// 	duel.forEach(participant => {
+	// 		if (participant.playerData.username === msg.author.username) {
+	// 			duels.splice(i, 1)
+	// 		}
+	// 	});
 
-function leave(msg) {
-	for (let i = 0; i < duels.length; i++) {
-		const duel = duels[i];
-		duel.forEach(participant => {
-			if (participant.playerData.username === msg.author.username) {
-				duels.splice(i, 1)
-			}
-		});
-
-	}
+	// }
 	for (let i = 0; i < players.length; i++) {
 		const player = players[i];
 		if (player.playerData.username === msg.author.username) {
@@ -174,13 +171,11 @@ function leave(msg) {
 	}
 }
 
-function reroll(msg) {
-	let splitMsg = msg.content.split(' ')
+function reroll(msg: Message, args: string[], player: Player) {
 	let dice: number[] = []
-	if (splitMsg[1]) {
-		dice = splitMsg[1].split(',').map(die => parseInt(die))
+	if (args[1]) {
+		dice = args[1].split(',').map(die => parseInt(die))
 	}
-	let player: Player = findPlayer(msg.author)
 	if (player) {
 		if (player.play.length >= dice.length) {
 			let oldDice: Dice[] = [...player.play]
@@ -190,7 +185,7 @@ function reroll(msg) {
 	}
 }
 
-function help(msg) {
+function help(msg: Message) {
 
 	const embed = new RichEmbed()
 		.setTitle(`Functions`)
@@ -223,118 +218,112 @@ function help(msg) {
 	msg.channel.send(embed);
 }
 
-function counter(msg) {
-	let arg: string = msg.content.split(' ')
-
-	let isDueling: boolean = false;
-	let playerOne: Player;
+function counter(msg: Message, args: string[], playerOne: Player) {
 	let playerTwo: Player;
-	let currentDuel: any[];
 
-	duels.forEach(duel => {
-		duel.forEach(participant => {
-			if (participant.playerData.username === msg.author.username) {
-				isDueling = true
-				currentDuel = [...duel]
+	if (playerOne.duel != '') {
+		const participants = findDuelParticipants(playerOne.duel)
+		let twoPlayers: boolean = false
+		if (participants.length === 2) {
+			twoPlayers = true
+			for (let i = 0; i < participants.length; i++) {
+				const participant = participants[i];
+				if (participant != playerOne) {
+					playerTwo = participant
+				}
 			}
-		});
-	});
-
-	if (isDueling) {
-		if (currentDuel[0].playerData.username === msg.author.username) {
-			playerOne = currentDuel[0]
-			playerTwo = currentDuel[1]
 		} else {
-			playerOne = currentDuel[1]
-			playerTwo = currentDuel[0]
+			//Add support for non 1v1 fights later.
 		}
 
-		switch (arg.length) {
-			case 1:
-				let counterArr: number[] = []
-				let rerollArr: number[] = []
-				let oldDiceOne: Dice[] = [...playerOne.play]
-				let oldDiceTwo: Dice[] = [...playerTwo.play]
-				for (let i = 0; i < playerOne.play.length; i++) {
-					const counteringDie = playerOne.play[i];
-					for (let j = playerTwo.play.length - 1; j >= 0; j--) {
-						const counteredDie = playerTwo.play[j];
-						if (counteringDie.value >= counteredDie.value) {
-							rerollArr.push(counteringDie.value);
-							playerTwo.counter([counteredDie.value])
-							break;
+		if (twoPlayers) {
+			switch (args.length) {
+				case 1:
+					let rerollArr: number[] = []
+					let oldDiceOne: Dice[] = [...playerOne.play]
+					let oldDiceTwo: Dice[] = [...playerTwo.play]
+					for (let i = 0; i < playerOne.play.length; i++) {
+						const counteringDie = playerOne.play[i];
+						for (let j = playerTwo.play.length - 1; j >= 0; j--) {
+							const counteredDie = playerTwo.play[j];
+							if (counteringDie.value >= counteredDie.value) {
+								rerollArr.push(counteringDie.value);
+								playerTwo.counter([counteredDie.value])
+								break;
+							}
 						}
 					}
-				}
-				if (rerollArr.length > 0) {
-					playerOne.reroll(rerollArr)
-					msg.channel.send(`${printDice(oldDiceOne)} -> ${printDice(playerOne.play)}`)
-					msg.channel.send(`${printDice(oldDiceTwo)} -> ${printDice(playerTwo.play)}`)
-				} else {
-					msg.channel.send('Nothing was countered.')
-				}
+					if (rerollArr.length > 0) {
+						playerOne.reroll(rerollArr)
+						msg.channel.send(`${printDice(oldDiceOne)} -> ${printDice(playerOne.play)}`)
+						msg.channel.send(`${printDice(oldDiceTwo)} -> ${printDice(playerTwo.play)}`)
+					} else {
+						msg.channel.send('Nothing was countered.')
+					}
+					break;
 
+				case 4:
+					let counteredDice: number[] = args[1]
+						.split('/')[0]
+						.split(',')
+						.map(x => parseInt(x))
+					let counteredType: string = args[1].split('/')[1]
+					let counteringDice: number[] = args[3]
+						.split('/')[0]
+						.split(',')
+						.map(x => parseInt(x))
+					let counteringType: string = args[3].split('/')[1]
 
-				break;
+					if (counteringType) {
 
-			case 4:
-				let counteredDice: number[] = arg[1]
-					.split('/')[0]
-					.split(',')
-					.map(x => parseInt(x))
-				let counteredType: string = arg[1].split('/')[1]
-				let counteringDice: number[] = arg[3]
-					.split('/')[0]
-					.split(',')
-					.map(x => parseInt(x))
-				let counteringType: string = arg[3].split('/')[1]
+					} else {
+						let oldDice: Dice[] = playerOne.play
+						playerOne.reroll(counteringDice)
+						msg.channel.send(`${playerOne.playerData}`)
+						msg.channel.send(`${printDice(oldDice)} -> ${printDice(playerOne.play)}`)
+					}
 
-				if (counteringType) {
+					if (counteredType) {
 
-				} else {
-					let oldDice: Dice[] = playerOne.play
-					playerOne.reroll(counteringDice)
-					msg.channel.send(`${playerOne.playerData}`)
-					msg.channel.send(`${printDice(oldDice)} -> ${printDice(playerOne.play)}`)
-				}
-
-				if (counteredType) {
-
-				} else {
-					let oldDice: Dice[] = [...playerTwo.play]
-					playerTwo.counter(counteredDice)
-					msg.channel.send(`${playerTwo.playerData}`)
-					msg.channel.send(`${printDice(oldDice)} -> ${printDice(playerTwo.play)}`)
-				}
-				break;
-
-			default:
-				msg.channel.send('Improper arguments')
-				break;
-		}
+					} else {
+						let oldDice: Dice[] = [...playerTwo.play]
+						playerTwo.counter(counteredDice)
+						msg.channel.send(`${playerTwo.playerData}`)
+						msg.channel.send(`${printDice(oldDice)} -> ${printDice(playerTwo.play)}`)
+					}
+					break;
+				default:
+					msg.channel.send('Improper arguments')
+					break;
+			}
+		} else { msg.channel.send('!counter is supported for 1v1 duels only currently, use !reroll and !discard manually for bigger duels') }
 	} else { msg.channel.send('You are not in a duel') }
 
 }
 
-function fight(msg) {
-	let playerOne: Player = findPlayer(msg.author)
-	let playerTwo: Player;
+function fight(msg: Message, args: string[], playerOne: Player) {
 	if (playerOne) {
-		let arg: string = msg.content.split(' ')[1]
-		if (arg) {
-			let otherFighter = client.users.find(user => user.id === arg.split('@')[1].split('>')[0])
-			playerTwo = findPlayer(otherFighter)
-			if (playerTwo) {
-				duels.push([playerOne, playerTwo])
-				msg.channel.send(`${duels[0][0].playerData} fighting ${duels[0][1].playerData}`)
-			} else { msg.channel.send('Other player is not in the fight yet.') }
-		} else { msg.channel.send('Need someone to fight against') }
+		if (playerOne.duel === '') {
+			if (args.length === 2) {
+				const playerTwoId: string = args.split('@')[1].split('>')[0]
+				const playerTwo: Player = findPlayerById(playerTwoId, msg.guild)
+				if (playerTwo) {
+					//Neither player is in a duel yet.
+					if (playerTwo.duel === '') {
+						//Generate new duel
+						const duelId: string = generateRandomString(10);
+						playerOne.duel = duelId;
+						playerTwo.duel = duelId;
+					} else {
+						playerOne.duel = playerTwo.duel
+					}
+				} else { msg.channel.send('Other player is not in the fight yet.') }
+			} else { msg.channel.send('Need someone to fight against') }
+		} else { msg.channel.send(`You're already in a duel.`) }
 	} else { msg.channel.send('Step into the fight first.') }
 }
 
-function sheet(msg) {
-	let player: Player = findPlayer(msg.author)
-
+function sheet(msg: Message, player: Player) {
 	if (player) {
 		let anteString = ''
 		player.antes.forEach(ante => {
@@ -368,24 +357,22 @@ function sheet(msg) {
 	}
 }
 
-function ante(msg) {
-	let args = msg.content.split(' ')
+function ante(msg: Message, args: string[], player: Player) {
 	if (args.length >= 2) {
 		let anteName = args[1]
-		let player = findPlayer(msg.author)
-		let diceString
+		let diceString = printDice(player.play)
 		if (player) {
 			let ante: Ante = player.ante(anteName)
 			if (!!ante) {
 				msg.channel.send(`
 						${ante.name}: ${ante.power}, used
+						${diceString}
 						`)
 			} else { msg.channel.send('Ante not found/Ante used') }
 		}
 	} else { msg.channel.send('Enter an ante.') }
 }
-function mydice(msg) {
-	let player: Player = findPlayer(msg.author);
+function mydice(msg: Message, player: Player) {
 	if (player) {
 		msg.channel.send(`${msg.author} your dice: ${printDice(player.play, player.pressureTokens)}
 		Total pressure: ${player.pressure}
@@ -393,8 +380,7 @@ function mydice(msg) {
 	} else { msg.channel.send('You have not stepped into a fight yet.') }
 }
 
-function cut(msg) {
-	let player = findPlayer(msg.author)
+function cut(msg: Message, player: Player) {
 	if (player) {
 		if (player.discard >= player.clock) {
 			player.cut(true)
@@ -406,49 +392,54 @@ function cut(msg) {
 	} else { msg.channel.send('Not in a fight yet.') }
 }
 
-function press(msg) {
-	let player: Player = findPlayer(msg.author)
+function press(msg: Message, player: Player) {
+
 	if (player) {
 		msg.channel.send(`[Press], current pressure: ${player.press()}`)
 	}
 }
 
-function slayers(msg) {
-
-	pregens.slayers.forEach(slayer => {
-		let anteString = ''
-		slayer.antes.forEach(ante => {
-			anteString += `
+function slayers(msg: Message, args: string[]) {
+	if (args.length === 2) {
+		let slayer = findSlayer(args[1])
+		if (slayer) {
+			let anteString = ''
+			slayer.antes.forEach(ante => {
+				anteString += `
 					${ante.name}: ${ante.power}
 					${ante.text}
 
 					`
-		})
-
-		const embed = new RichEmbed()
-			// Set the title of the field
-			.setTitle(`${slayer.name}`)
-			// Set the color of the embed
-			.setColor(0xFF0000)
-			// Set the main content of the embed
-			.setDescription(`
+			})
+			const embed = new RichEmbed()
+				// Set the title of the field
+				.setTitle(`${slayer.name}`)
+				// Set the color of the embed
+				.setColor(0xFF0000)
+				// Set the main content of the embed
+				.setDescription(`
 				Power: ${slayer.power}
 				Antes:
 				${anteString}
 				`);
-		// Send the embed to the same channel as the message
-		msg.channel.send(embed);
-	});
+			// Send the embed to the same channel as the message
+			msg.channel.send(embed);
+		}
+	} else {
+		let slayerString: string = ''
+		pregens.slayers.forEach(slayer => {
+			slayerString += `${slayer.name} `
+		})
+		msg.channel.send(`Current slayers: ${slayerString}`)
+	}
 }
 
-function discard(msg) {
-	let player = findPlayer(msg.author)
-	let splitMsg = msg.content.split(' ')
+function discard(msg: Message, args: string[], player: Player) {
 	if (player) {
 		if (player.play.length) {
-			let dice = splitMsg[1].split(',').map(x => parseInt(x))
+			let dice = args[1].split(',').map(x => parseInt(x))
 			player.counter(dice)
-			let diceString = ''
+			let diceString: string = ''
 			dice.forEach(die => {
 				diceString += `${diceList.d6[die - 1].emoji} `
 			});
@@ -459,84 +450,77 @@ function discard(msg) {
 
 client.on('message', msg => {
 	if (msg.author.username != botName) {
-		if (msg.content.startsWith('!emojitest')) {
-			msg.channel.send('▫')
-		}
-		if (msg.content.startsWith('!help')) {
-			help(msg);
-		}
-		if (msg.content.startsWith('!enter')) {
-			enter(msg);
-		}
-		if (msg.content.startsWith('!commit')) {
-			commit(msg);
-		}
-		if (msg.content.startsWith('!leave')) {
-			leave(msg);
-		}
-		if (msg.content.startsWith('!sheet')) {
-			sheet(msg);
-		}
-		if (msg.content.startsWith('!fight')) {
-			fight(msg);
-		}
-		if (msg.content.startsWith('!counter')) {
-			counter(msg);
-		}
-		if (msg.content.startsWith('!reroll')) {
-			reroll(msg);
-		}
-		if (msg.content.startsWith('!mydice')) {
-			mydice(msg);
-		}
-		if (msg.content.startsWith('!press')) {
-			press(msg);
-		}
-		if (msg.content.startsWith('!ante')) {
-			ante(msg);
-		}
-		if (msg.content.startsWith('!slayers')) {
-			slayers(msg);
-		}
-		if (msg.content.startsWith('!cut')) {
-			cut(msg);
-		}
-		if (msg.content.startsWith('!discard')) {
-			discard(msg);
-		}
-		// if (msg.content.startsWith('!myPressure')) {
-		// 	const player: Player = findPlayer(msg.author)
-		// 	if (player) {
-		// 		let diceString: string = printDice(player)
-		// 		if (diceString != '') {
-		// 			msg.channel.send(`Your pressure is currently ${player.pressure}: ` + diceString)
-		// 		} else { msg.channel.send('Your pressure is 0') }
-		// 	} else { msg.channel.send('Not in a fight.') }
-		// }
-		if (msg.content.startsWith('!setPressure')) {
-			const args: string = msg.content.split(' ')
-			const player: Player = findPlayer(msg.author)
-			if (player) {
-				const length = player.play.length
-				const newPressure: number = parseInt(args[1])
-				if (newPressure >= 0 && newPressure >= length) {
-					player.pressure = newPressure
-					player.pressureTokens = newPressure - length
-					msg.channel.send(`Pressure set to ${newPressure}, out of which ${length} dice and ${newPressure - length} tokens`)
-				} else { msg.channel.send('New pressure cant be smaller than 0 or smaller than the amount of dice you have out') }
-			} else { msg.channel.send('Not in a fight.') }
-		}
-		if (msg.content.startsWith('!setPower')) {
-			const args: string = msg.content.split(' ')
-			const player: Player = findPlayer(msg.author)
-			if (player) {
-				const length = player.play.length
-				const newPower: number = parseInt(args[1])
-				if (newPower >= 0) {
-					player.availablePower = newPower
-					msg.channel.send(`Power set to ${newPower}`)
+		const args: string[] = msg.content.split(' ')
+		const player: Player = findPlayer(msg.author)
+		switch (args[0]) {
+			case '!emojitest':
+				msg.channel.send('▫')
+				break;
+			case '!help':
+				help(msg);
+				break;
+			case '!enter':
+				enter(msg, player);
+				break;
+			case '!commit':
+				commit(msg, args, player);
+				break;
+			case '!leave':
+				leave(msg);
+				break;
+			case '!sheet':
+				sheet(msg, player);
+				break;
+			case '!fight':
+				fight(msg, args, player);
+				break;
+			case '!counter':
+				counter(msg, args, player);
+				break;
+			case '!reroll':
+				reroll(msg, args, player);
+				break;
+			case '!mydice':
+				mydice(msg, player);
+				break;
+			case '!press':
+				press(msg, player);
+				break;
+			case '!ante':
+				ante(msg, args, player);
+				break;
+			case '!slayers':
+				slayers(msg, args);
+				break;
+			case '!cut':
+				cut(msg, player);
+				break;
+			case '!discard':
+				discard(msg, args, player);
+				break;
+			case '!setPressure':
+				if (player) {
+					const length = player.play.length
+					const newPressure: number = parseInt(args[1])
+					if (newPressure >= 0 && newPressure >= length) {
+						player.pressure = newPressure
+						player.pressureTokens = newPressure - length
+						msg.channel.send(`Pressure set to ${newPressure}, out of which ${length} dice and ${newPressure - length} tokens`)
+					} else { msg.channel.send('New pressure cant be smaller than 0 or smaller than the amount of dice you have out') }
+				} else { msg.channel.send('Not in a fight.') }
+				break;
+			case '!setPower':
+
+				if (player) {
+					const newPower: number = parseInt(args[1])
+					if (newPower >= 0) {
+						player.availablePower = newPower
+						msg.channel.send(`Power set to ${newPower}`)
+					}
 				}
-			}
+				break;
+			default:
+				break;
 		}
 
 	}

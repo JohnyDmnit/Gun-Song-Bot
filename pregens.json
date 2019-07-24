@@ -27,7 +27,7 @@
 			"antes": [
 				{
 					"name": "Onslaught",
-					"power": 3,
+					"power": 1,
 					"text": "Rising Action: [Fight]. This turn, you may choose not to reroll any or all of your pushed dice."
 				},
 				{
@@ -39,6 +39,27 @@
 					"name": "Reckless Strength",
 					"power": 2,
 					"text": "Commit: After you commit dice, discard your lowest die from play"
+				}
+			]
+		},
+		{
+			"name": "Defender",
+			"power": 3,
+			"antes": [
+				{
+					"name": "Vigilance",
+					"power": 1,
+					"text": "Rising Action: Choose an ally. For the rest of this fight, you may also use Defiance to boost the effective number of dice that ally has in play. Then, [Fight]."
+				},
+				{
+					"name": "Guarded Strength",
+					"power": 2,
+					"text": "Defiance: You may reflexively discard dice from this pool to boost your effective pressure during an enemy turn. \nCommit: After you commit dice, move your 2 lowest dice in play to your Power."
+				},
+				{
+					"name": "Rallying Cry",
+					"power": 3,
+					"text": "Rising Action: [Wait], and each of your allies may reroll any dice they have in play."
 				}
 			]
 		}

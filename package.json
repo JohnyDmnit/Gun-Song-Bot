@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "watch": "tsc -p tsconfig.json -w",
-    "bot": "nodemon bot.js"
+    "bot": "node bot.js",
+    "monbot": "nodemon bot.js"
   },
   "author": "",
   "license": "ISC",
