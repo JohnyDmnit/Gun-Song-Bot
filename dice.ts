@@ -1,7 +1,7 @@
 
 export class Dice {
 	private _type: string
-	private _size: string
+	private _size: number
 	private _value: number
 	private _emoji: string
 
@@ -13,7 +13,7 @@ export class Dice {
 		if (format.length != 1) {
 			const emojiFormat: string[] = format[1].split('_')
 			this._type = emojiFormat[0]
-			this._size = emojiFormat[0].split('d')[1]
+			this._size = parseInt(emojiFormat[0].split('d')[1])
 			this._value = parseInt(emojiFormat[1])
 
 		} else {
@@ -37,7 +37,7 @@ export class Dice {
 	// 	this._size = v;
 	// }
 
-	public get size(): string {
+	public get size(): number {
 		return this._size
 	}
 

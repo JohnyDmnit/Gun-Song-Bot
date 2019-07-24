@@ -32,106 +32,115 @@ export class Player {
 
 	}
 
-	public set playerData(v : any) {
+	public set playerData(v: any) {
 		this._playerData = v;
 	}
 
-	public get playerData() : any {
+	public get playerData(): any {
 		return this._playerData
 	}
-	
-	public set play(v : Dice[]) {
+
+	public set play(v: Dice[]) {
 		this._play = v;
 	}
-	
-	public get play() : Dice[] {
+
+	public get play(): Dice[] {
 		return this._play
 	}
-	
+
 	// public set power(v : number) {
 	// 	this._power = v;
 	// }
-	
-	public get power() : number {
+
+	public get power(): number {
 		return this._power
 	}
-	
-	public set availablePower(v : number) {
+
+	public set availablePower(v: number) {
 		this._availablePower = v;
 	}
-	
-	public get availablePower() : number {
+
+	public get availablePower(): number {
 		return this._availablePower
 	}
-		
-	public set antes(v : Ante[]) {
+
+	public set antes(v: Ante[]) {
 		this._antes = v;
 	}
-	
-	public get antes() : Ante[] {
+
+	public get antes(): Ante[] {
 		return this._antes
 	}
-	
-	public set classType(v : string) {
+
+	public set classType(v: string) {
 		this._classType = v;
 	}
-	
-	public get classType() : string {
+
+	public get classType(): string {
 		return this._classType
 	}
-	
-	public set discard(v : number) {
+
+	public set discard(v: number) {
 		this._discard = v;
 	}
-	
-	public get discard() : number {
+
+	public get discard(): number {
 		return this._discard
 	}
 
-	public set clock(v : number) {
+	public set clock(v: number) {
 		this._clock = v;
 	}
-	
-	public get clock() : number {
+
+	public get clock(): number {
 		return this._clock
 	}
-	
-	public set pressure(v : number) {
+
+	public set pressure(v: number) {
 		this._pressure = v;
 	}
-	
-	public get pressure() : number {
+
+	public get pressure(): number {
 		return this._pressure
 	}
-	
-	public set pressureTokens(v : number) {
+
+	public set pressureTokens(v: number) {
 		this._pressureTokens = v;
 	}
-	
-	public get pressureTokens() : number {
+
+	public get pressureTokens(): number {
 		return this._pressureTokens
 	}
-	
-	public set duel(v : string) {
+
+	public set duel(v: string) {
 		this._duel = v;
 	}
-	
-	public get duel() : string {
+
+	public get duel(): string {
 		return this._duel
 	}
-	
-	addDice(n: number, size: number = 6){
+
+	rollDice(n: number, size: number = 6) {
 		for (let i = 0; i < n; i++) {
-			let roll = this.dice(size)
-			this._play.push(this._diceList[`d${size}`][roll - 1])
+			let roll = this.dice(size) - 1
+			this._play.push(this._diceList[`d${size}`][roll])
 		}
 		this._play.sort((a, b) => a.value - b.value)
+	}
+
+	addDice(diceArr: number[], size: number = 6) {
+		for (let i = 0; i < diceArr.length; i++) {
+			const value = diceArr[i] - 1;
+			this._play.push(this._diceList[`d${size}`][value])
+		}
+		this._play.sort((a, b) => a.value - b.value)
+		this._pressure = this._play.length + this._pressureTokens
 	}
 
 	push(n: number, size: number = 6) {
 		this._availablePower -= n;
 		this._pressureTokens = 0;
-		this.addDice(n, size)
+		this.rollDice(n, size)
 		this._pressure = this._play.length + this._pressureTokens
 	}
 
@@ -151,7 +160,7 @@ export class Player {
 				anteExists = true
 				foundAnte = ante
 				ante.available = false
-				this.addDice(ante.power)
+				this.rollDice(ante.power)
 				break
 			}
 		}
@@ -165,14 +174,18 @@ export class Player {
 	}
 
 	//Keep all dice removals in here
-	counter(dice: number[], xType?: number) {
+	counter(dice: number[], size: number = 0) {
 		for (let i = 0; i < dice.length; i++) {
 			const die = dice[i];
 			for (let j = 0; j < this._play.length; j++) {
-				const playerDie = this._play[j];
+				const playerDie: Dice = this._play[j];
 				if (die === playerDie.value) {
-					if (xType) {
-
+					if (size != 0) {
+						if (playerDie.size === size) {
+							this._play.splice(j, 1)
+							this._discard++
+							break
+						}
 					} else {
 						this._play.splice(j, 1)
 						this._discard++
@@ -192,7 +205,7 @@ export class Player {
 		this._clock++;
 	}
 
-	reroll(dice: number[], type?: string) {
+	reroll(dice: number[], size: number = 0) {
 		let length = this._play.length
 		let newDice: Dice[] = []
 		let newPlay: Dice[] = [...this._play]
@@ -203,8 +216,13 @@ export class Player {
 				for (let j = 0; j < this._play.length; j++) {
 					const playerDie = this._play[j];
 					if (playerDie.value === die) {
-						if (type) {
-
+						if (size != 0) {
+							if (playerDie.size === size) {
+								let roll = this.dice(playerDie.size)
+								newPlay.splice(j, 1)
+								newPlay.push(this._diceList[playerDie.type][roll - 1])
+								break
+							}
 						} else {
 							let roll = this.dice(playerDie.size)
 							newPlay.splice(j, 1)
