@@ -30,7 +30,7 @@ client.on('message', msg => {
 				msg.channel.send('▫')
 				break;
 			case '!help':
-				help(msg);
+				help(msg, args);
 				break;
 			case '!enter':
 				enter(msg, player, players, pregens, diceList);

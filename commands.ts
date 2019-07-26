@@ -23,7 +23,7 @@ export function initDice(diceList: any, client) {
 }
 
 //Generate a random string
-export function generateRandomString(length: number) {
+function generateRandomString(length: number) {
 	const characters: string = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
 	const charactersLength = characters.length;
 	let res: string = ''
@@ -43,7 +43,7 @@ export function findPlayer(playerData: User, players: Player[]): Player {
 	}
 }
 //Find a player in the server the message was sent in by Id.
-export function findPlayerById(userId: string, guild: Guild, players: Player[]): Player {
+function findPlayerById(userId: string, guild: Guild, players: Player[]): Player {
 	for (let i = 0; i < guild.members.length; i++) {
 		const member = guild.members[i];
 		if (member.id === userId) {
@@ -52,7 +52,7 @@ export function findPlayerById(userId: string, guild: Guild, players: Player[]):
 	}
 }
 //Find a slayer in the pregens json
-export function findSlayer(slayerName: string, pregens) {
+function findSlayer(slayerName: string, pregens) {
 	for (let i = 0; i < pregens.slayers.length; i++) {
 		const slayer = pregens.slayers[i];
 		if (slayer.name.toUpperCase().startsWith(slayerName.toUpperCase())) {
@@ -61,7 +61,7 @@ export function findSlayer(slayerName: string, pregens) {
 	}
 }
 //Find duel participants by duel id
-export function findDuelParticipants(duelId: string, players: Player[]): Player[] {
+function findDuelParticipants(duelId: string, players: Player[]): Player[] {
 	let participants: Player[] = []
 	for (let i = 0; i < players.length; i++) {
 		const player = players[i];
@@ -72,7 +72,10 @@ export function findDuelParticipants(duelId: string, players: Player[]): Player[
 	return participants
 }
 
-export function printDice(dice: Dice[], pressureTokens?: number): string {
+
+
+//Print a dice array and pressure tokens if supplied.
+function printDice(dice: Dice[], pressureTokens?: number): string {
 	console.log
 	const length = dice.length
 	let diceString: string = ''
@@ -88,6 +91,7 @@ export function printDice(dice: Dice[], pressureTokens?: number): string {
 	return diceString
 }
 
+//Enter a fight
 export function enter(msg: Message, player: Player, players: Player[], pregens, diceList) {
 	let classType: string = msg.content.split(' ')[1].toUpperCase()
 	if (!!classType) {
@@ -164,37 +168,68 @@ export function reroll(msg: Message, args: string[], player: Player) {
 	}
 }
 
-export function help(msg: Message) {
-
-	const embed = new RichEmbed()
-		.setTitle(`export functions`)
-		.setColor(0xFF0000)
-		.setDescription(`
-		!help - print this list
-
-		!enter - step into the fight, needs a class, ex: !enter assassin
-
-		!commit - commit a number of dice into play, need a number of dice and type, ex !commit 2d6
-
-		!leave - step out of the fight
-
-		!reroll - reroll an amount of dice, can be used without argument to reroll all, or specifing which dice ex: !reroll, !reroll 2,2
-
-		!mydice - display your currently in play dice
-
-		!sheet - display your character sheet
-
-		!fight - fight another player, ex: !fight @Johny
-
-		!slayers - display available slayers
-
-		!press - gain a pressure token
-
-		!cut - regain a dice if you have enough discarded dice
-
-		!discard - discard your own dice ex: !discard 1,2,3
-		`);
-	msg.channel.send(embed);
+export function help(msg: Message, args: string[]) {
+	const commandList: string = 'Available commands, use as argument for details:\n!help, !enter, !commit, !leave, !sheet, !fight, !counter, !reroll, !mydice, !press, !ante, !slayers, !cut, !discard, !setPressure, !setPower, !addDice'
+	let command: string = ''
+	if (args[1]) {
+		switch (args[1]) {
+			case '!help':
+				command = 'Print this list'
+				break;
+			case '!enter':
+				command = 'Enter the fight by selecting a class, ex: !enter Berserker'
+				break;
+			case '!commit':
+				command = 'Commit dice from your power pool, ex: !commit 4'
+				break;
+			case '!leave':
+				command = 'Leave the fight'
+				break;
+			case '!sheet':
+				command = 'Display your character sheet'
+				break;
+			case '!fight':
+				command = 'Duel a particular player ex: !duel @someone'
+				break;
+			case '!counter':
+				command = 'Counter dice, can take multiple arguments, !counter, no arguments, optimaly counters dice, !counter x with y, counters specific dice disregarding dice type, !counter x/X with y/Y, counters specific type taking the type of the dice into account.'
+				break;
+			case '!reroll':
+				command = 'Reroll some dice you currently have, can be specific by type, ex: !reroll 1,2,3 !reroll 1,2,3/4'
+				break;
+			case '!mydice':
+				command = 'Display your current in play dice and how many pressure tokens you have, ex: !mydice'
+				break;
+			case '!press':
+				command = 'Increase your pressure with pressure tokens, ex: !press'
+				break;
+			case '!ante':
+				command = 'Commit an ante into play, ex: !ante Overclock'
+				break;
+			case '!slayers':
+				command = 'Display available slayers to play, use slayer as argument to get detail, ex: !slayers, !slayers Assassin'
+				break;
+			case '!cut':
+				command = 'Advance the clock, if you have enough dice in the discard you gain one die to your power, ex: !cut'
+				break;
+			case '!discard':
+				command = 'Discard dice from your own dice pool, can be specific to dice type ex: !discard 4, !discard 4/6'
+				break;
+			case '!setPower':
+				command = 'Set your power to an arbitrary value, ex: !setPower 10'
+				break;
+			case '!setPressure':
+				command = 'Set pressure to an arbitrary value, cannot be lower than the amount of dice you have in play, ex: !setPressure'
+				break;
+			case '!addDice':
+				command = 'Add arbitrary dice into play, dice type is after slash, ex: !addDice 1,2,3,4/6'
+				break;
+			default:
+				command = 'No valid command entered'
+				break;
+		}
+		msg.channel.send(`${args[1]} - ${command}`);
+	} else { msg.channel.send(commandList) }
 }
 
 export function counter(msg: Message, args: string[], playerOne: Player, players: Player[]) {
@@ -313,6 +348,7 @@ export function fight(msg: Message, args: string[], playerOne: Player, players: 
 export function sheet(msg: Message, player: Player) {
 	if (player) {
 		let anteString = ''
+		const diceString: string = printDice(player.play)
 		player.antes.forEach(ante => {
 			anteString += `
 						${ante.name}: ${ante.power}d${ante.size}
@@ -331,6 +367,7 @@ export function sheet(msg: Message, player: Player) {
 			.setDescription(`
 						Class: ${player.classType}
 						Available power: ${player.availablePower}d${player.powerSize}
+						Dice in play: ${diceString}
 						Current Pressure: ${player.pressure}
 						Pressure tokens: ${player.pressureTokens}
 						Dice in discard: ${player.discard}
