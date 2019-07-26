@@ -2,64 +2,159 @@
 	"slayers": [
 		{
 			"name": "Assassin",
-			"power": 2,
+			"power": "2d6",
 			"antes": [
 				{
 					"name": "Shadow Assault",
-					"power": 3,
+					"power": "3d6",
 					"text": "Rising Action: Gain a pressure tokens and [Wait]."
 				},
 				{
 					"name": "Poisoned blades",
-					"power": 2,
+					"power": "2d6",
 					"text": "Action: Spend two pressure tokens to discard two enemy dice from play."
 				},
 				{
 					"name": "Coup de Grace",
-					"power": 1,
+					"power": "1d6",
 					"text": "Rising Action: Counter one die from the enemy who passed you your turn, then [Take]."
 				}
 			]
 		},
 		{
 			"name": "Berserker",
-			"power": 6,
+			"power": "4d6",
 			"antes": [
 				{
 					"name": "Onslaught",
-					"power": 1,
+					"power": "3d6",
 					"text": "Rising Action: [Fight]. This turn, you may choose not to reroll any or all of your pushed dice."
 				},
 				{
 					"name": "Shatter the Weak",
-					"power": 1,
+					"power": "1d6",
 					"text": "Action: [Fight]. After, if no enemy dice remain in play, you may discard one die from enemies’ Power. This turn, discard all pushed dice."
 				},
 				{
 					"name": "Reckless Strength",
-					"power": 2,
+					"power": "2d6",
 					"text": "Commit: After you commit dice, discard your lowest die from play"
 				}
 			]
 		},
 		{
 			"name": "Defender",
-			"power": 3,
+			"power": "3d6",
 			"antes": [
 				{
 					"name": "Vigilance",
-					"power": 1,
+					"power": "1d6",
 					"text": "Rising Action: Choose an ally. For the rest of this fight, you may also use Defiance to boost the effective number of dice that ally has in play. Then, [Fight]."
 				},
 				{
 					"name": "Guarded Strength",
-					"power": 2,
-					"text": "Defiance: You may reflexively discard dice from this pool to boost your effective pressure during an enemy turn. \nCommit: After you commit dice, move your 2 lowest dice in play to your Power."
+					"power": "2d6",
+					"text": "Commit: After you commit dice, move your 2 lowest dice in play to your Power.\nReaction: Move your lowest die in play to your Power and gain 2 pressure tokens."
 				},
 				{
-					"name": "Rallying Cry",
-					"power": 3,
-					"text": "Rising Action: [Wait], and each of your allies may reroll any dice they have in play."
+					"name": "Staggering Shout",
+					"power": "3d6",
+					"text": "Rising Action: You may push one die belonging to each enemy in the fight."
+				}
+			]
+		},
+		{
+			"name": "Caliber",
+			"power": "3d6",
+			"antes": [
+				{
+					"name": "Quickdraw",
+					"power": "1d6",
+					"text": "Action: You may take this action on your first turn. Set a die in play to its maximum value."
+				},
+				{
+					"name": "Trick Shot",
+					"power": "2d6",
+					"text": "Action: Push a matching pair. Counter an enemy die showing a smaller face. You may choose to not reroll the pushed dice when you pass."
+				},
+				{
+					"name": "Called Shot",
+					"power": "3d6",
+					"text": "Rising Action: [Fight], then choose an enemy nonbasic Action they have unlocked this fight, or a Rising Action they have not. They cannot use this action for the rest of the fight."
+				}
+			]
+		},
+		{
+			"name": "Lancer",
+			"power": "3d6",
+			"antes": [
+				{
+					"name": "Judgment Cut",
+					"power": "3d6",
+					"text": "Rising Action: Roll 4d4 into play."
+				},
+				{
+					"name": "Summoned Swords",
+					"power": "2d4",
+					"text": "Action: Push any number of dice. Gain 1 Pressure token for each matching pair of dice you push. A die can only be part of one pair (four 2s give 2 Pressure)."
+				},
+				{
+					"name": "Called Shot",
+					"power": "1d6",
+					"text": "Action: Push a matched pair of dice. Discard up to three enemy dice equal to or less than the pair’s face."
+				}
+			]
+		},
+		{
+			"name": "Mechanical Turk",
+			"power": "3d6",
+			"antes": [
+				{
+					"name": "Overclock",
+					"power": "3d8",
+					"text": "Action: Push one die then add 2 Pressure tokens. Next turn, [Rise] or lose the duel."
+				},
+				{
+					"name": "Protocol: PURSUE",
+					"power": "3d6",
+					"text": "Action: [Fight]. Ignore any abilities that would prevent you from countering dice. Then, give your opponent +1 Pressure."
+				}
+			]
+		},
+		{
+			"name": "arRange - Mechanical Turk",
+			"power": "3d6",
+			"antes": [
+				{
+					"name": "Barrage",
+					"power": "2d8",
+					"text": "Passive: You discard your Pressure tokens if you or your opponent Commits."
+				},
+				{
+					"name": "Snipe",
+					"power": "1d6",
+					"text": "Action: Counter up to three dice with exactly matching faces. Do not reroll them when you [Pass]."
+				},
+				{
+					"name": "Constantine Cannon",
+					"power": "3d6",
+					"text": "Action: [Fight]. When you reroll your pushed dice during your [Pass], convert any roll of 2 or 3 to 1 and any roll of 4 or 5 to 6."
+				}
+			]
+		},
+		{
+			"name": "Saber",
+			"power": "5d6",
+			"antes": [
+				{
+					"name": "Reaper Form",
+					"power": "2d6",
+					"text": "Stance\nPassive: Choose an enemy when you first commit this in a fight. Your dice count as being one face higher for countering that enemy's dice, and one face lower for countering anything else."
+				},
+				{
+					"name": "Snake Form",
+					"power": "2d6",
+					"text": "Stance\nAction: Push any number of dice. Counter a single enemy die showing a face equal to the sum of the pushed dice."
 				}
 			]
 		}

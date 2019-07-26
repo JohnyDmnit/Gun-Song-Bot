@@ -1,13 +1,15 @@
 export class Ante {
-	_name: string;
-	_power: number;
-	_available: boolean;
-	_text: string;
+	private _name: string;
+	private _power: number;
+	private _size: number;
+	private _available: boolean;
+	private _text: string;
 
 	constructor(name, power, text) {
 		this._name = name
 		this._available = true
-		this._power = power
+		this._power = parseInt(power.split('d')[0])
+		this._size = parseInt(power.split('d')[1])
 		this._text = text
 	}
 	
@@ -25,6 +27,14 @@ export class Ante {
 	
 	public get power() : number {
 		return this._power
+	}
+
+	public set size(v : number) {
+		this._size = v;
+	}
+	
+	public get size() : number {
+		return this._size
 	}
 	
 	public set available(v : boolean) {

@@ -6,6 +6,7 @@ export class Player {
 	private _playerData: any;
 	private _play: Dice[];
 	private _power: number;
+	private _powerSize: number;
 	private _availablePower: number;
 	private _diceList: any;
 	private _antes: Ante[];
@@ -16,13 +17,14 @@ export class Player {
 	private _pressureTokens: number;
 	private _duel: string;
 
-	constructor(power: number, data: any, diceList: any, antes: Ante[], classType: string) {
+	constructor(power: string, data: any, diceList: any, antes: Ante[], classType: string) {
 		this._pressure = 0;
 		this._pressureTokens = 0;
-		this._power = power;
+		this._power = parseInt(power.split('d')[0]);
+		this._powerSize = parseInt(power.split('d')[1])
 		this._playerData = data;
 		this._play = [];
-		this._availablePower = power;
+		this._availablePower = parseInt(power.split('d')[0]);
 		this._diceList = diceList;
 		this._antes = antes.map(ante => new Ante(ante.name, ante.power, ante.text))
 		this._classType = classType;
@@ -54,6 +56,14 @@ export class Player {
 
 	public get power(): number {
 		return this._power
+	}
+
+	// public set powerSize(v : number) {
+	// 	this._powerSize = v;
+	// }
+
+	public get powerSize(): number {
+		return this._powerSize
 	}
 
 	public set availablePower(v: number) {
@@ -160,7 +170,7 @@ export class Player {
 				anteExists = true
 				foundAnte = ante
 				ante.available = false
-				this.rollDice(ante.power)
+				this.rollDice(ante.power, ante.size)
 				break
 			}
 		}
@@ -206,7 +216,6 @@ export class Player {
 	}
 
 	reroll(dice: number[], size: number = 0) {
-		let length = this._play.length
 		let newDice: Dice[] = []
 		let newPlay: Dice[] = [...this._play]
 
@@ -243,7 +252,6 @@ export class Player {
 				j++
 			}
 		}
-
 		newPlay.push(...newDice)
 		this._play = [...newPlay]
 		this._play.sort((a, b) => a.value - b.value)

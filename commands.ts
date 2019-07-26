@@ -246,15 +246,18 @@ export function counter(msg: Message, args: string[], playerOne: Player, players
 						.split('/')[0]
 						.split(',')
 						.map(x => parseInt(x))
-					let counteredType: string = args[1].split('/')[1]
+					let counteredType: number = parseInt(args[1].split('/')[1])
 					let counteringDice: number[] = args[3]
 						.split('/')[0]
 						.split(',')
 						.map(x => parseInt(x))
-					let counteringType: string = args[3].split('/')[1]
+					let counteringType: number = parseInt(args[3].split('/')[1])
 
 					if (counteringType) {
-
+						let oldDice: Dice[] = playerOne.play
+						playerOne.reroll(counteringDice, counteringType)
+						msg.channel.send(`${playerOne.playerData}`)
+						msg.channel.send(`${printDice(oldDice)} -> ${printDice(playerOne.play)}`)
 					} else {
 						let oldDice: Dice[] = playerOne.play
 						playerOne.reroll(counteringDice)
@@ -263,7 +266,10 @@ export function counter(msg: Message, args: string[], playerOne: Player, players
 					}
 
 					if (counteredType) {
-
+						let oldDice: Dice[] = [...playerTwo.play]
+						playerTwo.counter(counteredDice, counteredType)
+						msg.channel.send(`${playerTwo.playerData}`)
+						msg.channel.send(`${printDice(oldDice)} -> ${printDice(playerTwo.play)}`)
 					} else {
 						let oldDice: Dice[] = [...playerTwo.play]
 						playerTwo.counter(counteredDice)
@@ -309,7 +315,7 @@ export function sheet(msg: Message, player: Player) {
 		let anteString = ''
 		player.antes.forEach(ante => {
 			anteString += `
-						${ante.name}: ${ante.power}
+						${ante.name}: ${ante.power}d${ante.size}
 						Available: ${ante.available ? 'Yes' : 'No'}
 						${ante.text}
 
@@ -324,7 +330,7 @@ export function sheet(msg: Message, player: Player) {
 			// Set the main content of the embed
 			.setDescription(`
 						Class: ${player.classType}
-						Available power: ${player.availablePower}
+						Available power: ${player.availablePower}d${player.powerSize}
 						Current Pressure: ${player.pressure}
 						Pressure tokens: ${player.pressureTokens}
 						Dice in discard: ${player.discard}
@@ -341,14 +347,11 @@ export function sheet(msg: Message, player: Player) {
 export function ante(msg: Message, args: string[], player: Player) {
 	if (args.length >= 2) {
 		let anteName = args[1]
-		let diceString = printDice(player.play)
 		if (player) {
 			let ante: Ante = player.ante(anteName)
 			if (!!ante) {
-				msg.channel.send(`
-						${ante.name}: ${ante.power}, used
-						${diceString}
-						`)
+				let diceString = printDice(player.play)
+				msg.channel.send(`${ante.name}: ${ante.power}d${ante.size}, used\n${diceString}`)
 			} else { msg.channel.send('Ante not found/Ante used') }
 		}
 	} else { msg.channel.send('Enter an ante.') }
@@ -374,7 +377,6 @@ export function cut(msg: Message, player: Player) {
 }
 
 export function press(msg: Message, player: Player) {
-
 	if (player) {
 		msg.channel.send(`[Press], current pressure: ${player.press()}`)
 	}
@@ -409,22 +411,32 @@ export function slayers(msg: Message, args: string[], players: Player[], pregens
 	} else {
 		let slayerString: string = ''
 		pregens.slayers.forEach(slayer => {
-			slayerString += `${slayer.name} `
+			slayerString += `${slayer.name}, `
 		})
-		msg.channel.send(`Current slayers: ${slayerString}`)
+		msg.channel.send(`Current slayers: ${slayerString.slice(0, -2)}`)
 	}
 }
 
 export function discard(msg: Message, args: string[], player: Player, diceList) {
 	if (player) {
 		if (player.play.length) {
-			let dice = args[1].split(',').map(x => parseInt(x))
-			player.counter(dice)
-			let diceString: string = ''
-			dice.forEach(die => {
-				diceString += `${diceList.d6[die - 1].emoji} `
-			});
-			msg.channel.send(`${diceString} discarded`)
+			const dice: number[] = args[1].split('/')[0].split(',').map(x => parseInt(x))
+			const size: number = parseInt(args[1].split('/')[1])
+			if (size) {
+				player.counter(dice, size)
+				let diceString: string = ''
+				dice.forEach(die => {
+					diceString += `${diceList.d6[die - 1].emoji} `
+				});
+				msg.channel.send(`${diceString} discarded`)
+			} else {
+				player.counter(dice)
+				let diceString: string = ''
+				dice.forEach(die => {
+					diceString += `${diceList.d6[die - 1].emoji} `
+				});
+				msg.channel.send(`${diceString} discarded`)
+			}
 		} else { msg.channel.send('Nothing to discard.') }
 	} else { msg.channel.send('Not in a fight yet.') }
 }
@@ -450,13 +462,13 @@ export function setPower(msg: Message, args: string[], player: Player) {
 		}
 	} else { msg.channel.send('Not in a fight.') }
 }
-export function addDice (msg: Message, args: string[], player: Player) {
+export function addDice(msg: Message, args: string[], player: Player) {
 	if (args.length === 2) {
 		if (player) {
 			const dice: number[] = args[1].split('/')[0].split(',').map(x => parseInt(x))
 			const size: number = parseInt(args[1].split('/')[1])
 			if (dice.length != 0) {
-				if (!!size) {
+				if (size) {
 					player.addDice(dice, size)
 					const diceString = printDice(player.play, player.pressureTokens)
 					msg.channel.send(`${diceString}`)
