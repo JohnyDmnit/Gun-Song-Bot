@@ -6,14 +6,14 @@
   "scripts": {
     "watch": "tsc -p tsconfig.json -w",
     "bot": "node bot.js",
-    "monbot": "nodemon bot.js"
+    "botmon": "nodemon bot.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@types/node": "^12.6.2",
-    "discord.js": "^11.5.1",
-    "nodemon": "^1.19.1",
-    "typescript": "^3.5.3"
+    "@types/node": "^12.12.37",
+    "discord.js": "^11.6.4",
+    "nodemon": "^1.19.4",
+    "typescript": "^3.8.3"
   }
 }

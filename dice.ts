@@ -1,36 +1,28 @@
-
 export class Dice {
-	private _type: string
+	//Type of the dice d6,d8,d10 and so on
+	// private _type: string
+	//Type of the dice as a number d6 = 6, d10 = 10 and so on
 	private _size: number
+	//What the dice rolled
 	private _value: number
+	//Current emoji used when displaying dice
 	private _emoji: string
+	//Emoji list for the dice type
+	private _emojiList: any[]
 
-	constructor(emoji: string) {
+	constructor(emojiList: any[], size: number) {
 		//Emoji format: <:dType_Value:Number> if emoji is present
 		//Dice format: dy_x if emoji isnt present
-		this._emoji = emoji
-		const format: string[] = emoji.split(':')
-		if (format.length != 1) {
-			const emojiFormat: string[] = format[1].split('_')
-			this._type = emojiFormat[0]
-			this._size = parseInt(emojiFormat[0].split('d')[1])
-			this._value = parseInt(emojiFormat[1])
-
-		} else {
-			const diceFormat: string[] = this._emoji.split('_')
-			this._type = diceFormat[0]
-			this._type = diceFormat[0].split('d')[1]
-			this._value = parseInt(diceFormat[1])
-		}
+		this._emojiList = emojiList
+		this._size = size
+		// this._type = `d${size}`
+		this._value = this.reroll()
+		this._emoji = this._emojiList[this._value - 1].emoji
 
 	}
 
-	// public set type(v : string) {
-	// 	this._type = v;
-	// }
-
 	public get type(): string {
-		return this._type
+		return `d${this._size}`
 	}
 
 	// public set size(v : string) {
@@ -41,9 +33,9 @@ export class Dice {
 		return this._size
 	}
 
-	// public set value(v : number) {
-	// 	this._value = v;
-	// }
+	public set value(v: number) {
+		this._value = v;
+	}
 
 	public get value(): number {
 		return this._value
@@ -57,4 +49,12 @@ export class Dice {
 		return this._emoji
 	}
 
+	public reroll() {
+		console.log(this._value)
+		let newRoll: number = Math.ceil(Math.random() * this._size)
+		this._value = newRoll
+		this._emoji = this._emojiList[newRoll - 1].emoji
+		console.log(this._value)
+		return this._value
+	}
 }
