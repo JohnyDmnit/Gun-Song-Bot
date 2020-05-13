@@ -1,15 +1,15 @@
 import { Dice } from "./dice";
-export class NPC {
+export class Character {
 
 	//NPC's name
-	private _name: string
+	protected _name: string
 	//List of dice in play.
-	private _play: Dice[];
+	protected _play: Dice[];
 	//List of pushed dice to reroll.
-	private _pushed: Dice[];
-	private _pressure: number;
-	private _pressureTokens: number;
-	private _dicelist;
+	protected _pushed: Dice[];
+	protected _pressure: number;
+	protected _pressureTokens: number;
+	protected _dicelist;
 
 	constructor(name: string, diceList: any) {
 		this._name = name
@@ -61,7 +61,7 @@ export class NPC {
 	}
 
 	//Commit n dice of a certain size, default 6, for now it just pulls the dice out of thin air, will wire in power and antes later.
-	commmit(n: number, size: number = 6) {
+	public commmit(n: number, size: number = 6) {
 		this._pressureTokens = 0;
 		for (let i = 0; i < n; i++) {
 			this._play.push(new Dice(this._dicelist[`d${size}`], size))
@@ -71,7 +71,7 @@ export class NPC {
 	}
 
 	//Push dice that are in play to pay costs
-	push(n: number[], size: number) {
+	public push(n: number[], size: number) {
 		for (let i = 0; i < n.length; i++) {
 			const pushValue = n[i];
 			for (let j = 0; j < this._play.length; j++) {
@@ -86,7 +86,7 @@ export class NPC {
 	}
 
 	//Remove specified dice from play
-	removeDice(n: number[], size: number) {
+	public removeDice(n: number[], size: number) {
 		for (let i = 0; i < n.length; i++) {
 			const removeValue = n[i];
 			for (let j = 0; j < this._play.length; j++) {
@@ -100,7 +100,7 @@ export class NPC {
 	}
 
 	//End of turn cleanup
-	endTurn() {
+	public endTurn() {
 		if (this._pushed.length > 0) {
 			for (let i = 0; i < this._pushed.length; i++) {
 				this._pushed[i].reroll()

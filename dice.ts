@@ -1,6 +1,5 @@
 export class Dice {
-	//Type of the dice d6,d8,d10 and so on
-	// private _type: string
+	
 	//Type of the dice as a number d6 = 6, d10 = 10 and so on
 	private _size: number
 	//What the dice rolled
