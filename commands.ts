@@ -1,8 +1,6 @@
-import { Dice } from "./dice";
 import { User, Message, Channel, DMChannel } from "./node_modules/discord.js/src"
+import { Dice } from "./dice";
 import { GM } from "./gm";
-import { Player } from "./player";
-// import { Ante } from "./ante";
 
 export function createGame(msg: Message, gmList: GM[], diceList) {
 	const channel: Channel = msg.channel
@@ -15,14 +13,14 @@ export function createGame(msg: Message, gmList: GM[], diceList) {
 
 	gm = new GM(msg.author, diceList)
 	gmList.push(gm)
-	sendMsg(channel, `Congrats ${msg.author}, you're now GMing a game!`)
+	sendMsg(channel, `Congrats ${msg.author.username}, you're now GMing a game!`)
 }
 
 export async function add(msg: Message, args: string[], gmList: GM[]) {
 	const channel: Channel = msg.channel
 
 	if (!args[1]) {
-		sendMsg(channel, 'You didnt @ a user')
+		sendMsg(channel, `You didn't @ a user`)
 		return
 	}
 
@@ -36,25 +34,91 @@ export async function add(msg: Message, args: string[], gmList: GM[]) {
 		sendMsg(channel, `You're not running a game`)
 		return
 	}
-	
+
 	let player = gm.findPlayer(user)
 	if (player) {
-		sendMsg(channel, 'User already in your game')
+		sendMsg(channel, `User is already in your game`)
 		return
 	}
 
 	gm.addPlayer(user)
 	sendMsg(channel, `User added`)
 
+}
+
+export function addNPC(msg: Message, args: string[], gmList: GM[]) {
+	const channel: Channel = msg.channel
+	const npcName = args[1]
+	if (!npcName) {
+		sendMsg(channel, `You didn't give a name for a NPC`)
+		return
+	}
+
+	let gm: GM = findGM(msg.author, gmList)
+	if (!gm) {
+		sendMsg(channel, `You're not running a game`)
+		return
+	}
+
+	let npc = gm.findNPC(npcName)
+	if (npc) {
+		sendMsg(channel, `NPC already in your game`)
+		return
+	}
+
+	gm.addNPC(npcName)
+	sendMsg(channel, `NPC added`)
+
+}
+
+export function setNPC(msg: Message, args: string[], gmList: GM[]) {
+	const channel: Channel = msg.channel
+	const npcName = args[1]
+	if (!npcName) {
+		sendMsg(channel, `You didn't give a name for a NPC`)
+		return
+	}
+
+	let gm: GM = findGM(msg.author, gmList)
+	if (!gm) {
+		sendMsg(channel, `You're not running a game`)
+		return
+	}
+
+	let npc = gm.findNPC(npcName)
+	if (!npc) {
+		sendMsg(channel, `NPC not found, you can add them with !add ${npcName}`)
+		return
+	}
+
+	gm.currentNPC = npc
+	sendMsg(channel, `Current npc: ${npc.name}`)
+}
+
+export function listNPC(msg: Message, gmList: GM[]) {
+	const channel: Channel = msg.channel
+
+	let gm: GM = findGM(msg.author, gmList)
+	if (!gm) {
+		sendMsg(channel, `You're not running a game`)
+		return
+	}
+
+	let npcString: string = ``
+	for (const npc of gm.npcList) {
+		npcString += `${npc.name}\n`
+	}
+
+	sendMsg(channel, npcString)
 
 }
 
 //Enter a fight
 export async function enter(msg: Message, args: string[], gmList: GM[]) {
 	const channel: Channel = msg.channel
-	
+
 	if (!args[1]) {
-		sendMsg(channel, 'You didnt @ a user')
+		sendMsg(channel, `You didnt @ a user`)
 		return
 	}
 
@@ -66,15 +130,19 @@ export async function enter(msg: Message, args: string[], gmList: GM[]) {
 	console.log(JSON.stringify(user))
 
 	let gm: GM = findGM(user, gmList)
-
 	if (!gm) {
-		sendMsg(channel, `User is not running a game`)
+		sendMsg(channel, `User is not running a game.`)
+		return
+	}
+
+	if (gm.userData === msg.author) {
+		sendMsg(channel, `You can't be a player in your own game.`)
 		return
 	}
 
 	let player = gm.findPlayer(msg.author)
 	if (player) {
-		sendMsg(channel, 'You are already in the game')
+		sendMsg(channel, `You are already in the game.`)
 		return
 	}
 
@@ -88,19 +156,19 @@ export function commit(msg: Message, args: string[], gmList: GM[]) {
 	const channel: Channel = msg.channel
 	let dice = args[1]
 	if (!dice) {
-		sendMsg(channel, 'No dice comitted.')
+		sendMsg(channel, `No dice comitted.`)
 		return
 	}
 
-	const diceQuantity: number = parseInt(dice.split('d')[0])
+	const diceQuantity: number = parseInt(dice.split(`d`)[0])
 	if (!(diceQuantity && diceQuantity > 0)) {
-		sendMsg(channel, 'Invalid dice quantity')
+		sendMsg(channel, `Invalid dice quantity`)
 		return
 	}
 
-	const diceSize: number = parseInt(dice.split('d')[1])
+	const diceSize: number = parseInt(dice.split(`d`)[1])
 	if (!(diceSize && diceSize % 2 == 0 && diceSize <= 11)) {
-		sendMsg(channel, 'Invalid dice size')
+		sendMsg(channel, `Invalid dice size`)
 		return
 	}
 
@@ -113,28 +181,72 @@ export function commit(msg: Message, args: string[], gmList: GM[]) {
 	player.commmit(diceQuantity, diceSize)
 	sendMsg(channel, `
 	Dice in play:
-	${printDice(player.play, player.pressureTokens)}
+	${printDice(player.play)}
+	${momentumToken.repeat(player.pressureTokens)}
+	${guardToken.repeat(player.guardTokens)}
+	`)
+}
+
+//Commit dice into play from power or antes.
+export function npcCommit(msg: Message, args: string[], gmList: GM[]) {
+	const channel: Channel = msg.channel
+	let dice = args[1]
+	if (!dice) {
+		sendMsg(channel, `No dice comitted.`)
+		return
+	}
+
+	const diceQuantity: number = parseInt(dice.split(`d`)[0])
+	if (!(diceQuantity && diceQuantity > 0)) {
+		sendMsg(channel, `Invalid dice quantity`)
+		return
+	}
+
+	const diceSize: number = parseInt(dice.split(`d`)[1])
+	if (!(diceSize && diceSize % 2 == 0 && diceSize <= 11)) {
+		sendMsg(channel, `Invalid dice size`)
+		return
+	}
+	let gm = findGM(msg.author, gmList)
+	if (!gm) {
+		sendMsg(channel, `You're not running a game`)
+		return
+	}
+
+	let npc = gm.currentNPC
+	if (!npc) {
+		sendMsg(channel, `NPC not found.`)
+		return
+	}
+
+	npc.commmit(diceQuantity, diceSize)
+	sendMsg(channel, `
+	${npc.name}
+	Dice in play:
+	${printDice(npc.play)}
+	${momentumToken.repeat(npc.pressureTokens)}
+	${guardToken.repeat(npc.guardTokens)}
 	`)
 }
 
 //Push dice in play to pay costs
 export function push(msg: Message, args: string[], gmList: GM[]) {
 	const channel: Channel = msg.channel
-	let diceData = args[1].split('/')
+	let diceData = args[1].split(`/`)
 	if (!diceData) {
-		sendMsg(channel, 'Invalid dice data')
+		sendMsg(channel, `Invalid dice data`)
 		return
 	}
 
-	let diceValues = diceData[0].split(',').map(dice => parseInt(dice))
+	let diceValues = diceData[0].split(`,`).map(dice => parseInt(dice))
 	if (!diceValues) {
-		sendMsg(channel, 'Invalid dice quantity')
+		sendMsg(channel, `Invalid dice quantity`)
 		return
 	}
 
 	let diceSize = parseInt(diceData[1])
 	if (!(diceSize && diceSize % 2 == 0 && diceSize <= 11)) {
-		sendMsg(channel, 'Invalid dice size')
+		sendMsg(channel, `Invalid dice size`)
 		return
 	}
 
@@ -146,10 +258,57 @@ export function push(msg: Message, args: string[], gmList: GM[]) {
 	player.push(diceValues, diceSize);
 	sendMsg(channel, `
 	Dice in play:
-	${printDice(player.play, player.pressureTokens)}
+	${printDice(player.play)}
+	${momentumToken.repeat(player.pressureTokens)}
+	${guardToken.repeat(player.guardTokens)}
 
 	Pushed dice:
 	${printDice(player.pushed)}
+	`)
+}
+
+export function npcPush(msg: Message, args: string[], gmList: GM[]) {
+	const channel: Channel = msg.channel
+	let diceData = args[1].split(`/`)
+	if (!diceData) {
+		sendMsg(channel, `Invalid dice data`)
+		return
+	}
+
+	let diceValues = diceData[0].split(`,`).map(dice => parseInt(dice))
+	if (!diceValues) {
+		sendMsg(channel, `Invalid dice quantity`)
+		return
+	}
+
+	let diceSize = parseInt(diceData[1])
+	if (!(diceSize && diceSize % 2 == 0 && diceSize <= 11)) {
+		sendMsg(channel, `Invalid dice size`)
+		return
+	}
+
+	let gm = findGM(msg.author, gmList)
+	if (!gm) {
+		sendMsg(channel, `You're not running a game`)
+		return
+	}
+
+	let npc = gm.currentNPC
+	if (!npc) {
+		sendMsg(channel, `NPC not found.`)
+		return
+	}
+
+	npc.push(diceValues, diceSize);
+	sendMsg(channel, `
+	${npc.name}
+	Dice in play:
+	${printDice(npc.play)}
+	${momentumToken.repeat(npc.pressureTokens)}
+	${guardToken.repeat(npc.guardTokens)}
+
+	Pushed dice:
+	${printDice(npc.pushed)}
 	`)
 }
 
@@ -157,21 +316,21 @@ export function push(msg: Message, args: string[], gmList: GM[]) {
 export function remove(msg: Message, args: string[], gmList: GM[]) {
 	const channel: Channel = msg.channel
 
-	let diceData = args[1].split('/')
+	let diceData = args[1].split(`/`)
 	if (!diceData) {
-		sendMsg(channel, 'Invalid dice data')
+		sendMsg(channel, `Invalid dice data`)
 		return
 	}
 
-	let diceValues = diceData[0].split(',').map(dice => parseInt(dice))
+	let diceValues = diceData[0].split(`,`).map(dice => parseInt(dice))
 	if (!diceValues) {
-		sendMsg(channel, 'Invalid dice quantity')
+		sendMsg(channel, `Invalid dice quantity`)
 		return
 	}
 
 	let diceSize = parseInt(diceData[1])
 	if (!(diceSize && diceSize % 2 == 0 && diceSize <= 11)) {
-		sendMsg(channel, 'Invalid dice size')
+		sendMsg(channel, `Invalid dice size`)
 		return
 	}
 
@@ -183,10 +342,54 @@ export function remove(msg: Message, args: string[], gmList: GM[]) {
 	player.removeDice(diceValues, diceSize);
 	sendMsg(channel, `
 	Dice in play:
-	${printDice(player.play, player.pressureTokens)}
+	${printDice(player.play)}
+	${momentumToken.repeat(player.pressureTokens)}
+	${guardToken.repeat(player.guardTokens)}
 	`)
 }
 
+export function npcRemove(msg: Message, args: string[], gmList: GM[]) {
+	const channel: Channel = msg.channel
+
+	let diceData = args[1].split(`/`)
+	if (!diceData) {
+		sendMsg(channel, `Invalid dice data`)
+		return
+	}
+
+	let diceValues = diceData[0].split(`,`).map(dice => parseInt(dice))
+	if (!diceValues) {
+		sendMsg(channel, `Invalid dice quantity`)
+		return
+	}
+
+	let diceSize = parseInt(diceData[1])
+	if (!(diceSize && diceSize % 2 == 0 && diceSize <= 11)) {
+		sendMsg(channel, `Invalid dice size`)
+		return
+	}
+
+	let gm = findGM(msg.author, gmList)
+	if (!gm) {
+		sendMsg(channel, `You're not running a game`)
+		return
+	}
+
+	let npc = gm.currentNPC
+	if (!npc) {
+		sendMsg(channel, `NPC not found.`)
+		return
+	}
+
+	npc.removeDice(diceValues, diceSize);
+	sendMsg(channel, `
+	${npc.name}
+	Dice in play:
+	${printDice(npc.play)}
+	${momentumToken.repeat(npc.pressureTokens)}
+	${guardToken.repeat(npc.guardTokens)}
+	`)
+}
 
 export function press(msg: Message, gmList: GM[]) {
 	const channel: Channel = msg.channel
@@ -196,6 +399,311 @@ export function press(msg: Message, gmList: GM[]) {
 	}
 
 	sendMsg(channel, `[Press], current pressure: ${player.press()}`)
+}
+
+export function npcPress(msg: Message, gmList: GM[]) {
+	const channel: Channel = msg.channel
+	let gm = findGM(msg.author, gmList)
+	if (!gm) {
+		sendMsg(channel, `You're not running a game`)
+		return
+	}
+
+	let npc = gm.currentNPC
+	if (!npc) {
+		sendMsg(channel, `NPC not found.`)
+		return
+	}
+
+	sendMsg(channel, `[Press], current pressure: ${npc.press()}`)
+}
+
+export function guard(msg: Message, args: string[], gmList: GM[]) {
+	const channel: Channel = msg.channel
+
+	let value = parseInt(args[1])
+	if (!value) {
+		sendMsg(channel, `Invalid value`)
+		return
+	}
+
+	let player = findPlayer(msg.author, gmList)
+	if (!player) {
+		sendMsg(channel, `You're not a player yet`)
+	}
+
+	player.guard(value)
+	sendMsg(channel, `
+	${player.name}
+	Dice in play:
+	${printDice(player.play)}
+	${momentumToken.repeat(player.pressureTokens)}
+	${guardToken.repeat(player.guardTokens)}
+	`)
+}
+
+export function npcGuard(msg: Message, args: string[], gmList: GM[]) {
+	const channel: Channel = msg.channel
+
+	let value = parseInt(args[1])
+	if (!value) {
+		sendMsg(channel, `Invalid value`)
+		return
+	}
+
+	let gm = findGM(msg.author, gmList)
+	if (!gm) {
+		sendMsg(channel, `You're not running a game`)
+		return
+	}
+
+	let npc = gm.currentNPC
+	if (!npc) {
+		sendMsg(channel, `NPC not found.`)
+		return
+	}
+
+	npc.guard(value)
+	sendMsg(channel, `
+	${npc.name}
+	Dice in play:
+	${printDice(npc.play)}
+	${momentumToken.repeat(npc.pressureTokens)}
+	${guardToken.repeat(npc.guardTokens)}
+	`)
+
+}
+
+export function setPushedDice(msg: Message, args: string[], gmList: GM[]) {
+	const channel: Channel = msg.channel
+	//Command looks like !setDice x,x,x/y to z, arg[1] is x,x,x/y
+	if (!args[1]) {
+		sendMsg(channel, `You didn't specify which dice.`)
+		return
+	}
+
+	//Command looks like !setDice x,x,x/y to z, arg[3] is z
+	if (!args[3]) {
+		sendMsg(channel, `You didn't specify the value to set the dice to.`)
+		return
+	}
+
+	let diceData = args[1].split(`/`)
+	if (!diceData) {
+		sendMsg(channel, `Invalid dice data`)
+		return
+	}
+
+	let value = parseInt(args[3])
+	if (!value) {
+		sendMsg(channel, `Invalid value`)
+		return
+	}
+
+	let diceValues = diceData[0].split(`,`).map(dice => parseInt(dice))
+	if (!diceValues) {
+		sendMsg(channel, `Invalid dice quantity`)
+		return
+	}
+
+	let diceSize = parseInt(diceData[1])
+	if (!(diceSize && diceSize % 2 == 0 && diceSize <= 11)) {
+		sendMsg(channel, `Invalid dice size`)
+		return
+	}
+
+	let player = findPlayer(msg.author, gmList)
+	if (!player) {
+		sendMsg(channel, `You're not a player yet`)
+	}
+
+	player.setDice(diceValues, diceSize, value, player.pushed)
+	sendMsg(channel, `
+	Dice in play:
+	${printDice(player.play)}
+	${momentumToken.repeat(player.pressureTokens)}
+	${guardToken.repeat(player.guardTokens)}
+
+	Pushed dice:
+	${printDice(player.pushed)}
+	`)
+
+}
+
+export function setPlayDice(msg: Message, args: string[], gmList: GM[]) {
+	const channel: Channel = msg.channel
+	//Command looks like !setDice x,x,x/y to z, arg[1] is x,x,x/y
+	if (!args[1]) {
+		sendMsg(channel, `You didn't specify which dice.`)
+		return
+	}
+
+	//Command looks like !setDice x,x,x/y to z, arg[3] is z
+	if (!args[3]) {
+		sendMsg(channel, `You didn't specify the value to set the dice to.`)
+		return
+	}
+
+	let diceData = args[1].split(`/`)
+	if (!diceData) {
+		sendMsg(channel, `Invalid dice data`)
+		return
+	}
+
+	let value = parseInt(args[3])
+	if (!value) {
+		sendMsg(channel, `Invalid value`)
+		return
+	}
+
+	let diceValues = diceData[0].split(`,`).map(dice => parseInt(dice))
+	if (!diceValues) {
+		sendMsg(channel, `Invalid dice quantity`)
+		return
+	}
+
+	let diceSize = parseInt(diceData[1])
+	if (!(diceSize && diceSize % 2 == 0 && diceSize <= 11)) {
+		sendMsg(channel, `Invalid dice size`)
+		return
+	}
+
+	let player = findPlayer(msg.author, gmList)
+	if (!player) {
+		sendMsg(channel, `You're not a player yet`)
+	}
+
+	player.setDice(diceValues, diceSize, value, player.play)
+	sendMsg(channel, `
+	Dice in play:
+	${printDice(player.play)}
+	${momentumToken.repeat(player.pressureTokens)}
+	${guardToken.repeat(player.guardTokens)}
+	`)
+
+}
+
+export function setNPCPushedDice(msg: Message, args: string[], gmList: GM[]) {
+	const channel: Channel = msg.channel
+	//Command looks like !setDice x,x,x/y to z, arg[1] is x,x,x/y
+	if (!args[1]) {
+		sendMsg(channel, `You didn't specify which dice.`)
+		return
+	}
+
+	//Command looks like !setDice x,x,x/y to z, arg[3] is z
+	if (!args[3]) {
+		sendMsg(channel, `You didn't specify the value to set the dice to.`)
+		return
+	}
+
+	let diceData = args[1].split(`/`)
+	if (!diceData) {
+		sendMsg(channel, `Invalid dice data`)
+		return
+	}
+
+	let value = parseInt(args[3])
+	if (!value) {
+		sendMsg(channel, `Invalid value`)
+		return
+	}
+
+	let diceValues = diceData[0].split(`,`).map(dice => parseInt(dice))
+	if (!diceValues) {
+		sendMsg(channel, `Invalid dice quantity`)
+		return
+	}
+
+	let diceSize = parseInt(diceData[1])
+	if (!(diceSize && diceSize % 2 == 0 && diceSize <= 11)) {
+		sendMsg(channel, `Invalid dice size`)
+		return
+	}
+
+	let gm = findGM(msg.author, gmList)
+	if (!gm) {
+		sendMsg(channel, `You're not running a game`)
+		return
+	}
+
+	let npc = gm.currentNPC
+	if (!npc) {
+		sendMsg(channel, `NPC not found.`)
+		return
+	}
+
+	npc.setDice(diceValues, diceSize, value, npc.pushed)
+	sendMsg(channel, `
+	Dice in play:
+	${printDice(npc.play)}
+	${momentumToken.repeat(npc.pressureTokens)}
+	${guardToken.repeat(npc.guardTokens)}
+
+	Pushed dice:
+	${printDice(npc.pushed)}
+	`)
+
+}
+
+export function setNPCPlayDice(msg: Message, args: string[], gmList: GM[]) {
+	const channel: Channel = msg.channel
+	//Command looks like !setDice x,x,x/y to z, arg[1] is x,x,x/y
+	if (!args[1]) {
+		sendMsg(channel, `You didn't specify which dice.`)
+		return
+	}
+
+	//Command looks like !setDice x,x,x/y to z, arg[3] is z
+	if (!args[3]) {
+		sendMsg(channel, `You didn't specify the value to set the dice to.`)
+		return
+	}
+
+	let diceData = args[1].split(`/`)
+	if (!diceData) {
+		sendMsg(channel, `Invalid dice data`)
+		return
+	}
+
+	let value = parseInt(args[3])
+	if (!value) {
+		sendMsg(channel, `Invalid value`)
+		return
+	}
+
+	let diceValues = diceData[0].split(`,`).map(dice => parseInt(dice))
+	if (!diceValues) {
+		sendMsg(channel, `Invalid dice quantity`)
+		return
+	}
+
+	let diceSize = parseInt(diceData[1])
+	if (!(diceSize && diceSize % 2 == 0 && diceSize <= 11)) {
+		sendMsg(channel, `Invalid dice size`)
+		return
+	}
+
+	let gm = findGM(msg.author, gmList)
+	if (!gm) {
+		sendMsg(channel, `You're not running a game`)
+		return
+	}
+
+	let npc = gm.currentNPC
+	if (!npc) {
+		sendMsg(channel, `NPC not found.`)
+		return
+	}
+
+	npc.setDice(diceValues, diceSize, value, npc.play)
+	sendMsg(channel, `
+	Dice in play:
+	${printDice(npc.play)}
+	${momentumToken.repeat(npc.pressureTokens)}
+	${guardToken.repeat(npc.guardTokens)}
+	`)
+
 }
 
 export function endTurn(msg: Message, gmList: GM[]) {
@@ -208,7 +716,53 @@ export function endTurn(msg: Message, gmList: GM[]) {
 	player.endTurn()
 	sendMsg(channel, `
 	Dice in play:
-	${printDice(player.play, player.pressureTokens)}
+	${printDice(player.play)}
+	${momentumToken.repeat(player.pressureTokens)}
+	${guardToken.repeat(player.guardTokens)}
+	`)
+}
+
+export function endNPCTurn(msg: Message, gmList: GM[]) {
+	const channel: Channel = msg.channel
+	let gm = findGM(msg.author, gmList)
+	if (!gm) {
+		sendMsg(channel, `You're not running a game`)
+		return
+	}
+
+	let npc = gm.currentNPC
+	if (!npc) {
+		sendMsg(channel, `NPC not found.`)
+		return
+	}
+
+	npc.endTurn()
+	sendMsg(channel, `
+	Dice in play:
+	${printDice(npc.play)}
+	${momentumToken.repeat(npc.pressureTokens)}
+	${guardToken.repeat(npc.guardTokens)}
+	`)
+}
+
+export function test(msg: Message, gmList) {
+	const channel: Channel = msg.channel
+	let gm = findGM(msg.author, gmList)
+	if (!gm) {
+		sendMsg(channel, `You're not running a game`)
+		return
+	}
+
+	let npc = gm.currentNPC
+	if (!npc) {
+		sendMsg(channel, `NPC not found.`)
+		return
+	}
+	sendMsg(channel, `
+	Dice in play:
+	${printDice(npc.play)}
+	${momentumToken.repeat(npc.pressureTokens)}
+	${guardToken.repeat(npc.guardTokens)}
 	`)
 }
 
@@ -217,36 +771,12 @@ UTILS
 */
 
 // const { RichEmbed } = require('discord.js');
-const tokenEmoji = '▫'
+const guardToken: string = `:shield:`
+const momentumToken: string = `▫`
 const msgSendOptions = {
 	split: {
-		char: ' '
+		char: ` `
 	}
-}
-
-//Initialize the dice list with emojis and proper dice objects
-export function initDice(diceList: any, client) {
-	client.emojis.cache.forEach(emoji => {
-		if (
-			emoji.name.startsWith('d4') ||
-			emoji.name.startsWith('d6') ||
-			emoji.name.startsWith('d8') ||
-			emoji.name.startsWith('d10')
-		) {
-			let emojiString = emoji.toString()
-			let format: string[] = emojiString.split(':')
-			let type: string = ''
-			let value: number = 0
-			if (format.length != 1) {
-				let emojiFormat: string[] = format[1].split('_')
-				type = emojiFormat[0]
-				value = parseInt(emojiFormat[1])
-
-			}
-			diceList[type].push({ value: value, emoji: emojiString })
-			diceList[type].sort((a, b) => a.value - b.value)
-		}
-	})
 }
 
 function sendMsg(channel: Channel | DMChannel, content, msgOptions: any = msgSendOptions) {
@@ -258,26 +788,29 @@ function editMsg(message: Message, content) {
 }
 
 //Print a dice array and pressure tokens if supplied.
-function printDice(dice: Dice[], pressureTokens?: number): string {
+function printDice(dice?: Dice[]): string {
 	const diceArrLen = dice.length
-	let diceString: string = ''
+	let diceString: string = ``
 	if (diceArrLen) {
 		const emojiLength = dice[0].emoji.length + 1
+		// Discord messages have a character limit of 2000
 		if (emojiLength * diceArrLen <= 1999) {
-			for (let i = 0; i < diceArrLen; i++) {
-				const die = dice[i].emoji;
+			for (const i of dice) {
+				const die = i.emoji;
 				diceString += `${die} `
 			}
-			if (pressureTokens) {
-				for (let i = 0; i < pressureTokens; i++) {
-					diceString += `${tokenEmoji} `
-				}
-			}
+			// if (pressure) {
+			// 	diceString += `${momentumToken} `.repeat(pressure)
+			// }
+			// if (guard) {
+			// 	diceString += `${guardToken} `.repeat(guard)
+			// }
 		} else {
 			let emojiCountArr: string[] = []
 			let emojiStoreArr: string[] = []
-			for (let i = 0; i < diceArrLen; i++) {
-				const die = dice[i].emoji;
+
+			for (const i of dice) {
+				const die = i.emoji;
 				if (emojiStoreArr.includes(die)) {
 					emojiCountArr.push(die)
 				} else {
@@ -285,13 +818,10 @@ function printDice(dice: Dice[], pressureTokens?: number): string {
 					emojiStoreArr.push(die)
 				}
 			}
-			const emojiStoreArrLen = emojiStoreArr.length
-			const emojiCountArrLen = emojiCountArr.length
-			for (let i = 0; i < emojiStoreArrLen; i++) {
-				const emoji = emojiStoreArr[i];
+
+			for (const emoji of emojiStoreArr) {
 				let count = 0
-				for (let j = 0; j < emojiCountArrLen; j++) {
-					const countEmoji = emojiCountArr[j];
+				for (const countEmoji of emojiCountArr) {
 					if (emoji === countEmoji) {
 						count++
 					}
@@ -299,20 +829,16 @@ function printDice(dice: Dice[], pressureTokens?: number): string {
 				diceString += `${count}x${emoji} `
 				emojiCountArr.splice(0, count)
 			}
-			if (pressureTokens) {
-				for (let i = 0; i < pressureTokens; i++) {
-					diceString += `${tokenEmoji} `
-				}
-			}
+			// if (pressure) {
+			// 	diceString += `${momentumToken} `.repeat(pressure)
+			// }
 		}
 	}
 	return diceString ? diceString : "No dice"
 }
 
 function findGM(user: User, gmList: GM[]) {
-	for (let i = 0; i < gmList.length; i++) {
-		const gm = gmList[i];
-		console.log(gm.userData)
+	for (const gm of gmList) {
 		if (gm.userData === user) {
 			return gm;
 		}
@@ -320,9 +846,8 @@ function findGM(user: User, gmList: GM[]) {
 	return null
 }
 
-function findPlayer(user: User, gmList) {
-	for (let i = 0; i < gmList.length; i++) {
-		const gm = gmList[i];
+function findPlayer(user: User, gmList: GM[]) {
+	for (const gm of gmList) {
 		let player = gm.findPlayer(user)
 		if (player) {
 			return player
@@ -333,15 +858,22 @@ function findPlayer(user: User, gmList) {
 
 async function findUserById(msg: Message, id: string) {
 	const channel: Channel = msg.channel
-	let gmID = id.split('!')[1].split('>')[0] //Get the user ID out of the @user 
+	let gmID = id.split(`!`)[1].split(`>`)[0] //Get the user ID out of the @user 
 	if (!gmID) {
-		sendMsg(channel, 'You didnt @ a user')
+		sendMsg(channel, `You didnt @ a user`)
 		return null
 	}
 
+	/*
+	guild is the server the message was sent in
+	members are the guildmembers in that server
+	cache returns a collection of members instead of an object
+	get find the guildmember by key, the key in this case being a users ID
+	user returns the user that guildmember
+	*/
 	let user: User = await msg.guild.members.cache.get(gmID).user
 	if (!user) {
-		sendMsg(channel, 'You didnt @ a user on the same server')
+		sendMsg(channel, `You didnt @ a user on the same server`)
 		return null
 	}
 

@@ -1,3 +1,5 @@
+import { DiceEmoji } from "./diceEmoji";
+
 export class Dice {
 	
 	//Type of the dice as a number d6 = 6, d10 = 10 and so on
@@ -7,15 +9,15 @@ export class Dice {
 	//Current emoji used when displaying dice
 	private _emoji: string
 	//Emoji list for the dice type
-	private _emojiList: any[]
+	private _emojiList: DiceEmoji[]
 
-	constructor(emojiList: any[], size: number) {
+	constructor(emojiList: DiceEmoji[], size: number) {
 		//Emoji format: <:dType_Value:Number> if emoji is present
 		//Dice format: dy_x if emoji isnt present
 		this._emojiList = emojiList
 		this._size = size
 		// this._type = `d${size}`
-		this._value = this.reroll()
+		this._value = this.roll()
 		this._emoji = this._emojiList[this._value - 1].emoji
 
 	}
@@ -24,31 +26,28 @@ export class Dice {
 		return `d${this._size}`
 	}
 
-	// public set size(v : string) {
-	// 	this._size = v;
-	// }
-
 	public get size(): number {
 		return this._size
 	}
 
+	public set size(v : number) {
+		this._size = v;
+	}
+
 	public set value(v: number) {
 		this._value = v;
+		this._emoji = this._emojiList[v - 1].emoji
 	}
 
 	public get value(): number {
 		return this._value
 	}
 
-	// public set emoji(v : string) {
-	// 	this._emoji = v;
-	// }
-
 	public get emoji(): string {
 		return this._emoji
 	}
 
-	public reroll() {
+	public roll(): number {
 		console.log(this._value)
 		let newRoll: number = Math.ceil(Math.random() * this._size)
 		this._value = newRoll
